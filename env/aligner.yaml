@@ -1,0 +1,8 @@
+channels:
+  - conda-forge
+  - bioconda
+dependencies:
+  - bwa
+  - bowtie2
+  - minimap2
+  - samtools
