@@ -1,4 +1,6 @@
 # 1. Checkpoints
+localrules: getdata_sra, getdata_local, download_refs, samtools_faidx, download_fastq, prepare_reference
+
 checkpoint getdata_sra:
     conda: "../env/getdata.yaml"
     output: csv = f"reads/{PRJNAME}/sra_runinfo.csv"
@@ -26,17 +28,20 @@ checkpoint getdata_local:
             fi
         done
         """
+        
 # 2. rules
 rule download_refs:
     output:
-        fasta=f"refs/{{refname}}/{{acc}}.fa",
-        gff=f"refs/{{refname}}/{{acc}}.gff"
-    log: f"refs/{{refname}}/logs/rule_dowload_refs/{{acc}}.log"
+        fasta = f"refs/{{refname}}/{{acc}}.fa",
+        gff = f"refs/{{refname}}/{{acc}}.gff"
+    log: f"refs/{{refname}}/logs/rule_download_refs/{{acc}}.log"
     conda: "../env/getdata.yaml"
     shell:
         """
-        esearch -db nuccore -query {wildcards.acc} | efetch -format fasta > {output.fasta}
-        esearch -db nuccore -query {wildcards.acc} | efetch -format gff > {output.gff}
+        search_result=$(esearch -db nuccore -query {wildcards.acc})
+        #use echo to only esearch once
+        echo "$search_result" | efetch -format fasta > {output.fasta}
+        echo "$search_result" | efetch -format gff > {output.gff}
         """
 
 rule download_fastq:
@@ -69,3 +74,17 @@ rule download_fastq:
             exit 1
         fi
         """
+
+rule samtools_faidx:
+    input:
+        ref = f"refs/{config['REFNAME']}/{config['ACC']}.fa"
+    output:
+        fai = f"refs/{config['REFNAME']}/{config['ACC']}.fa.fai"
+    conda: "../env/aligner.yaml"
+    shell:
+        "samtools faidx {input.ref}"
+
+rule prepare_reference: # shortcut to run download_refs and samtools_faidx
+    input:
+        f"refs/{config['REFNAME']}/{config['ACC']}.fa",
+        f"refs/{config['REFNAME']}/{config['ACC']}.fa.fai"
