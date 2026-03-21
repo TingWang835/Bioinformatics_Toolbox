@@ -2,7 +2,6 @@ channels:
   - conda-forge
   - bioconda
 dependencies:
-  - python=3.11
-  - bcftools
-  - freebayes
-  - snpeff
+  - fastqc
+  - trim-galore
+  - cutadapt

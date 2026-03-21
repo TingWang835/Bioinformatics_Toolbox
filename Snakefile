@@ -1,136 +1,129 @@
-# how to run: snakemake --cores 8 --use-conda --config PRJNAME=test DSOURCE=LOCAL -p
 import os
 import pandas as pd
 
-# 1. Setup and Config
-PRJNAME = config.get("PRJNAME")
+# 1. Setup and Configuration
+PRJNAME = config.get("PRJNAME") 
 if not PRJNAME:
     raise ValueError("ERROR: Specify PRJNAME via --config")
 
+# Load project-specific configuration from the project directory
 configfile: f"reads/{PRJNAME}/config.yaml"
 
-# 2. Checkpoints
-checkpoint getdata_sra:
-    conda: "env/getdata.yaml"
-    output: csv = f"reads/{PRJNAME}/sra_runinfo.csv"
-    shell:
-        """
-        if [ -f "{output.csv}" ]; then
-            echo "Loading existing {output.csv}"
-        else
-            esearch -db sra -query {config[PRJNUMBER]} | efetch -format runinfo > {output.csv}
-        fi
-        """
+# 2. Include Modular Rule Files
+include: "toolbox/getdata.smk" 
+include: "toolbox/qc.smk" 
+include: "toolbox/aligner.smk" 
+# include: "toolbox/vcf.smk"  
+# include: "toolbox/rnaseq.smk" 
 
-checkpoint getdata_local:
-    output: csv = f"reads/{PRJNAME}/local_runinfo.csv"
-    shell:
-        """
-        echo "Run,LibraryLayout" > {output.csv}
-        for f in reads/{PRJNAME}/*_1.fastq; do
-            base=$(basename $f _1.fastq)
-            # Check if _2.fastq exists AND is not an empty dummy file
-            if [ -s "reads/{PRJNAME}/${{base}}_2.fastq" ]; then
-                echo "$base,PAIRED" >> {output.csv}
-            else
-                echo "$base,SINGLE" >> {output.csv}
-            fi
-        done
-        """
-
-# 3. Targets
-def target_tag(wildcards):
-    return f"@RG\\tID:{wildcards.sample}\\tSM:{wildcards.sample}\\tLB:{wildcards.sample}"
-
-def target_full_alignment(wildcards):
+# 3. Get Functions
+def get_samples(wildcards):
+    """
+    Trigger checkpoints base on dsource from config.yaml (default: SRA)
+    local_runinfo.csv will be generated based on fastq file names under read/[project_name]
+    """
     dsource = config.get("DSOURCE", "SRA").upper()
-    aligner = config.get("ALIGNER", "bwa")
     
+    # Map data source to the corresponding checkpoint
     if dsource == "SRA":
-        checkpoint_output = checkpoints.getdata_sra.get(**wildcards).output[0]
+        cp_output = checkpoints.getdata_sra.get(**wildcards).output.csv 
     else:
-        checkpoint_output = checkpoints.getdata_local.get(**wildcards).output[0]
+        cp_output = checkpoints.getdata_local.get(**wildcards).output.csv 
         
-    df = pd.read_csv(checkpoint_output)
-    return [f"reads/{PRJNAME}/bam/{s}.{aligner}.bam" for s in df['Run']]
+    df = pd.read_csv(cp_output) 
+    return df['Run'].tolist() #make list using "Run" (SRR number) column
 
-# 4. Rules
-rule all:
-    input: target_full_alignment
 
-rule download_refs:
-    output:
-        fasta=f"refs/{{refname}}/{{acc}}.fa",
-        gff=f"refs/{{refname}}/{{acc}}.gff"
-    conda: "env/getdata.yaml"
-    shell:
-        """
-        esearch -db nuccore -query {wildcards.acc} | efetch -format fasta > {output.fasta}
-        esearch -db nuccore -query {wildcards.acc} | efetch -format gff > {output.gff}
-        """
+def get_qc(wildcards):
+    """
+    Generates QC report targets and forces trimming.
+    """
+    samples = get_samples(wildcards)
+    
+    # Standard FastQC reports
+    fastqc = expand("reads/{prj}/qc/{s}_{pair}_fastqc.html", 
+                    prj=PRJNAME, s=samples, pair=[1, 2])
+    
+    # Trimmed fastq files (Note: Trim Galore naming uses _1_val_1 and _2_val_2)
+    trim_r1 = expand("reads/{prj}/qc_trimmed/{s}_1_val_1.fq.gz", prj=PRJNAME, s=samples)
+    trim_r2 = expand("reads/{prj}/qc_trimmed/{s}_2_val_2.fq.gz", prj=PRJNAME, s=samples)
+    
+    # Return a combined list of all targets
+    return fastqc + trim_r1 + trim_r2
 
-rule download_fastq:
-    output:
-        r1 = f"reads/{PRJNAME}/{{sample}}_1.fastq",
-        r2 = f"reads/{PRJNAME}/{{sample}}_2.fastq"
-    conda: "env/getdata.yaml"
-    params:
-        dsource = config.get("DSOURCE", "SRA").upper(),
-        n = config.get("N", 10000)
-    shell:
-        """
-        if [ "{params.dsource}" == "SRA" ]; then
-            fastq-dump -X {params.n} --split-files --outdir reads/{PRJNAME} {wildcards.sample}
-            # Create dummy R2 only if a real one does not exist
-            if [ ! -f "{output.r2}" ]; then touch {output.r2}; fi
 
-        elif [ "{params.dsource}" == "LOCAL" ]; then
-            if [ ! -f "{output.r1}" ]; then 
-                echo "Error: Local R1 file {output.r1} missing!"; exit 1
-            fi
-            # Create dummy R2 only if a real one does not exist
-            if [ ! -f "{output.r2}" ]; then 
-                touch {output.r2}
-            fi
+def get_bam(wildcards):
+    """
+    Generates Bam file for aligner workflow.
+    """
+    samples = get_samples(wildcards)
+    aligner = config.get("ALIGNER", "bwa")
+    return expand("reads/{prj}/bam/filtered/{s}.{aln}.filtered.bam",
+                  prj=PRJNAME, s=samples, aln=aligner)
 
-        else
-            echo "Error: Invalid DSOURCE '{params.dsource}'. Use SRA or LOCAL."
-            exit 1
-        fi
-        """
-rule bwa_index:
+
+def get_vcf(wildcards):
+    """
+    Generates file list for the VCF workflow.
+    """
+    samples = get_samples(wildcards)
+    aligner = config.get("ALIGNER", "bwa") 
+    return expand("reads/{prj}/vcf/{s}.{aln}.vcf.gz", 
+                  prj=PRJNAME, s=samples, aln=aligner)
+
+def get_rnaseq(wildcards):
+    """
+    Generates file list for the RNA-seq workflow.
+    """
+    samples = get_samples(wildcards)
+    return expand("reads/{prj}/counts/{s}.counts.txt", 
+                  prj=PRJNAME, s=samples)
+
+
+
+# 4. Terminal Rules
+rule note:
     input:
-        ref = f"refs/{config['REFNAME']}/{config['ACC']}.fa"
-    output:
-        # Using multiext to track all 5 files BWA creates
-        multiext(f"refs/{config['REFNAME']}/bwa", ".amb", ".ann", ".bwt", ".pac", ".sa")
-    conda: "env/aligner.yaml"
-    params:
-        prefix = f"refs/{config['REFNAME']}/bwa"
-    shell:
-        "bwa index {input.ref} -p {params.prefix}"
+        # Leaving this empty ensures it doesn't trigger other rules
+    run:
+        print("\n" + "="*50)
+        print("THIS SNAKEFILE SERVICE AS TERMINAL FOR BIOINFOMATIC TOOLBOX")
+        print("Please specify a target rule:")
+        print("  snakemake qc      - Run FastQC")
+        print("  snakemake bam     - Run Alignments")
+        print("  snakemake vcf     - Run Variant Calling")
+        print("  snakemake rnaseq  - Run RNA-seq analysis")
+        print("="*50 + "\n")
 
-rule bwa:
-    input:
-        r1 = f"reads/{PRJNAME}/{{sample}}_1.fastq",
-        r2 = f"reads/{PRJNAME}/{{sample}}_2.fastq",
-        ref = f"refs/{config.get('REFNAME', 'tmp')}/{config.get('ACC', 'tmp')}.fa",
-        idx = multiext(f"refs/{config['REFNAME']}/bwa", ".amb", ".ann", ".bwt", ".pac", ".sa"),
-    output:
-        bam = temp(f"reads/{PRJNAME}/bam/{{sample}}.bwa.bam"),
-        bai = (f"reads/{PRJNAME}/bam/{{sample}}.bwa.bam.bai"),
-    conda: "env/aligner.yaml"
-    params:
-        tag = target_tag,
-        refindex = f"refs/{config.get('REFNAME')}/bwa",
-    shell:
-        """
-        # Determine if r2 is actually a data file or just a touched empty file
-        if [ -s "{input.r2}" ]; then
-            bwa mem -R '{params.tag}' {params.refindex} {input.r1} {input.r2} | samtools sort -o {output.bam}
-        else
-            bwa mem -R '{params.tag}' {params.refindex} {input.r1} | samtools sort -o {output.bam}
-        fi
-        samtools index {output.bam}
-        """
+rule qc:
+    """
+    QC for fastq files.
+    """
+    input: get_qc
+
+
+rule bam:
+    """
+    Align fastq files with index by chosen aligner
+    """
+    input: get_bam
+
+rule vcf:
+    """
+    Entry point for the Variant Calling workflow.
+    """
+    input: get_vcf
+
+rule rnaseq:
+    """
+    Entry point for the RNA-seq workflow.
+    """
+    input: get_rnaseq
+
+
+
+
+
+
+
 

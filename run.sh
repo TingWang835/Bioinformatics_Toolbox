@@ -1,0 +1,21 @@
+#!/bin/bash
+# Bioinformatic Toolbox Master Runner
+
+# Capture Project and Target
+PRJ=$1 #capture 1st word after cmd
+TARGET=$2 #capture 2nd word 
+
+# Validation: Ensure project and target are provided
+if [ -z "$PRJ" ] || [ -z "$TARGET" ]; then
+    echo "Usage: bash run.sh [project_name] [target]"
+    echo "Available targets: qc, bam, vcf, rnaseq"
+    exit 1
+fi
+
+# Execution with your standardized flags
+snakemake \
+    --config PRJNAME="$PRJ" \
+    --use-conda \
+    --cores 4 \
+    --printshellcmds \
+    "$TARGET"
