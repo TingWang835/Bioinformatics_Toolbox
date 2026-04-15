@@ -13,43 +13,59 @@ checkpoint getdata_sra:
         fi
         """
 
+        
 checkpoint getdata_local:
-    output: csv = f"reads/{PRJNAME}/local_runinfo.csv"
+    output: f"reads/{PRJNAME}/local_runinfo.csv"
     shell:
         """
         echo "Run,LibraryLayout" > {output.csv}
-        for f in reads/{PRJNAME}/*_1.fastq; do
-            base=$(basename $f _1.fastq)
-            # Check if _2.fastq exists AND is not an empty dummy file
-            if [ -s "reads/{PRJNAME}/${{base}}_2.fastq" ]; then
+        for f in reads/{PRJNAME}/*_1.fast*; do
+            base=$(basename $f | sed 's/_1.fast.*//')
+
+            # Check if _2.fast* exists AND is not an empty dummy file
+            if [ -s "reads/{PRJNAME}/${{base}}_2.fast*" ]; then
                 echo "$base,PAIRED" >> {output.csv}
             else
                 echo "$base,SINGLE" >> {output.csv}
             fi
-        done
-        """
         
+        done
+        """        
+
+
 # 2. rules
 rule download_refs:
     output:
-        fasta = f"refs/{{refname}}/{{acc}}.fa",
-        gff = f"refs/{{refname}}/{{acc}}.gff"
-    log: f"refs/{{refname}}/logs/rule_download_refs/{{acc}}.log"
+        fasta = f"refs/{config['REFNAME']}/{config['ACC']}.fa",
+        gff = f"refs/{config['REFNAME']}/{config['ACC']}.gff"
+    params: acc = f"{config['ACC']}"
     conda: "../env/getdata.yaml"
+    log: f"reads/{PRJNAME}/logs/getdata/download_refs_{config['ACC']}.log"
     shell:
         """
-        search_result=$(esearch -db nuccore -query {wildcards.acc})
-        #use echo to only esearch once
+        search_result=$(esearch -db nuccore -query {params.acc})
+        
+        # 1. Fetch FASTA (for aligner and vcf annotation)
         echo "$search_result" | efetch -format fasta > {output.fasta}
-        echo "$search_result" | efetch -format gff > {output.gff}
+        
+        # 2. Fetch GFF3 (for vcf annotation)
+        echo "$search_result" | efetch -format gff3 > {output.gff}
         """
+
+## this is a unfinished function used in adding metadata to gff files, which can later enhance snpeff_build to create better annotation db
+# rule augment_gff:
+#     input: f"refs/{config['REFNAME']}/{config['ACC']}.gff"
+#     output: f"refs/{config['REFNAME']}/{config['ACC']}.enhanced.gff"
+#     shell:
+#         # Example: Adding a project tag to every gene line
+#         "sed 's/gene_id=/project={PRJNAME};gene_id=/g' {input} > {output}"
 
 rule download_fastq:
     output:
         r1 = f"reads/{PRJNAME}/{{sample}}_1.fastq",
         r2 = f"reads/{PRJNAME}/{{sample}}_2.fastq"
-    log: f"reads/{PRJNAME}/logs/rule_download_fastq/{{sample}}.log"
     conda: "../env/getdata.yaml"
+    log: f"reads/{PRJNAME}/logs/getdata/download_fastq/{{sample}}.log"
     params:
         dsource = config.get("DSOURCE", "SRA").upper(),
         n = config.get("N", 10000)
@@ -75,14 +91,16 @@ rule download_fastq:
         fi
         """
 
+
 rule samtools_faidx:
     input:
         ref = f"refs/{config['REFNAME']}/{config['ACC']}.fa"
     output:
         fai = f"refs/{config['REFNAME']}/{config['ACC']}.fa.fai"
     conda: "../env/aligner.yaml"
+    log: f"reads/{PRJNAME}/logs/getdata/samtools_faidx_{{config['ACC']}}.log"
     shell:
-        "samtools faidx {input.ref}"
+        "samtools faidx {input.ref} > {log} 2>&1"
 
 rule prepare_reference: # shortcut to run download_refs and samtools_faidx
     input:

@@ -13,7 +13,7 @@ configfile: f"reads/{PRJNAME}/config.yaml"
 include: "toolbox/getdata.smk" 
 include: "toolbox/qc.smk" 
 include: "toolbox/aligner.smk" 
-# include: "toolbox/vcf.smk"  
+include: "toolbox/vcf.smk"  
 # include: "toolbox/rnaseq.smk" 
 
 # 3. Get Functions
@@ -64,12 +64,15 @@ def get_bam(wildcards):
 
 def get_vcf(wildcards):
     """
-    Generates file list for the VCF workflow.
+    Generates vcf.gz, merged.vcf.gz, 
     """
     samples = get_samples(wildcards)
     aligner = config.get("ALIGNER", "bwa") 
-    return expand("reads/{prj}/vcf/{s}.{aln}.vcf.gz", 
-                  prj=PRJNAME, s=samples, aln=aligner)
+    annvcf =  f"reads/{PRJNAME}/vcf/all_samples.{aligner}.ann.vcf"
+    annstats = f"reads/{PRJNAME}/vcf/all_samples.{aligner}.snpeff_stats.html"
+    consensus = expand("reads/{prj}/vcf/consensus/{s}.{aln}.consensus.fa", prj=PRJNAME, s=samples, aln=aligner)
+    return [annvcf, annstats] + consensus
+    
 
 def get_rnaseq(wildcards):
     """

@@ -1,3 +1,4 @@
+localrules:bwa_index, bowtie2_index, minimap2_index, align, filter_bam
 # 1. Input Functions
 def get_tag(wildcards):
     """Generates the Read Group tag for BWA/Minimap2."""
@@ -27,26 +28,26 @@ def get_align_input(wildcards):
 rule bwa_index:
     input: ref = f"refs/{config['REFNAME']}/{config['ACC']}.fa"
     output: multiext(f"refs/{config['REFNAME']}/bwa", ".amb", ".ann", ".bwt", ".pac", ".sa")
-    log: f"refs/{config['REFNAME']}/logs/rule_bwa_index.log"
+    log: f"reads/{PRJNAME}/logs/aligner/bwa_index.log"
     conda: "../env/aligner.yaml"
     params: prefix = f"refs/{config['REFNAME']}/bwa"
-    shell: "bwa index {input.ref} -p {params.prefix}"
+    shell: "bwa index {input.ref} -p {params.prefix} > {log} 2>&1"
     
 
 rule bowtie2_index:
     input: ref = f"refs/{config['REFNAME']}/{config['ACC']}.fa"
     output: multiext(f"refs/{config['REFNAME']}/bowtie2", ".1.bt2", ".2.bt2", ".3.bt2", ".4.bt2", ".rev.1.bt2", ".rev.2.bt2")
-    log: f"refs/{config['REFNAME']}/logs/rule_bowtie2_index.log"
+    log: f"reads/{PRJNAME}/logs/aligner/bowtie2_index.log"
     conda: "../env/aligner.yaml"
     params: prefix = f"refs/{config['REFNAME']}/bowtie2"
-    shell: "bowtie2 build {input.ref} {params.prefix}"
+    shell: "bowtie2 build {input.ref} {params.prefix} > {log} 2>&1"
 
 rule minimap2_index:
     input: ref = f"refs/{config['REFNAME']}/{config['ACC']}.fa"
     output: f"refs/{config['REFNAME']}/minimap2.mmi"
-    log: f"refs/{config['REFNAME']}/logs/rule_minimap2_index.log"
+    log: f"reads/{PRJNAME}/logs/aligner/minimap2_index.log"
     conda: "../env/aligner.yaml"
-    shell: "minimap2 -d {output} {input.ref}"
+    shell: "minimap2 -d {output} {input.ref} > {log} 2>&1"
 
 rule align:
     input:
@@ -56,7 +57,7 @@ rule align:
     output:
         bam = temp(f"reads/{PRJNAME}/bam/{{sample}}.{{aligner}}.raw.bam"),
         bai = temp(f"reads/{PRJNAME}/bam/{{sample}}.{{aligner}}.raw.bam.bai")
-    log: f"reads/{PRJNAME}/logs/rule_align/{{sample}}.{{aligner}}.log"
+    log: f"reads/{PRJNAME}/logs/aligner/align/{{sample}}.{{aligner}}.log"
     conda: "../env/aligner.yaml"
     params:
         tag = get_tag,
@@ -87,11 +88,11 @@ rule align:
 
 rule filter_bam:
     input:
-        bam = f"reads/{{PRJNAME}}/bam/{{sample}}.{{aligner}}.raw.bam",
-        bai = f"reads/{{PRJNAME}}/bam/{{sample}}.{{aligner}}.raw.bam.bai"
+        bam = f"reads/{PRJNAME}/bam/{{sample}}.{{aligner}}.raw.bam",
+        bai = f"reads/{PRJNAME}/bam/{{sample}}.{{aligner}}.raw.bam.bai"
     output:
-        filtered = f"reads/{{PRJNAME}}/bam/filtered/{{sample}}.{{aligner}}.filtered.bam"
-    log: f"reads/{{PRJNAME}}/logs/rule_filter_bam/{{sample}}.{{aligner}}.log"
+        filtered = f"reads/{PRJNAME}/bam/filtered/{{sample}}.{{aligner}}.filtered.bam"
+    log: f"reads/{PRJNAME}/logs/aligner/filter_bam/{{sample}}.{{aligner}}.log"
     conda: "../env/aligner.yaml"
     params:
         mapq = config.get("MAPQ", "30"),

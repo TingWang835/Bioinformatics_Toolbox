@@ -1,3 +1,4 @@
+localrules: fastqc, trim_reads
 rule fastqc:
     input:
         r1 = f"reads/{PRJNAME}/{{sample}}_1.fastq",
@@ -5,7 +6,7 @@ rule fastqc:
     output:
         html1 = f"reads/{PRJNAME}/qc/{{sample}}_1_fastqc.html",
         html2 = f"reads/{PRJNAME}/qc/{{sample}}_2_fastqc.html"
-    log: f"reads/{PRJNAME}/logs/fastqc/{{sample}}.log"
+    log: f"reads/{PRJNAME}/logs/qc/fastqc/{{sample}}.log"
     conda: "../env/qc.yaml"
     shell:
         """
@@ -28,7 +29,7 @@ rule trim_reads:
         # Trim Galore naming convention for paired: _val_1 and _val_2
         r1_p = f"reads/{PRJNAME}/qc_trimmed/{{sample}}_1_val_1.fq.gz",
         r2_p = f"reads/{PRJNAME}/qc_trimmed/{{sample}}_2_val_2.fq.gz"
-    log: f"reads/{PRJNAME}/logs/trimming/{{sample}}.log"
+    log: f"reads/{PRJNAME}/logs/qc/trim_reads/{{sample}}.log"
     conda: "../env/qc.yaml"
     shell:
         """
