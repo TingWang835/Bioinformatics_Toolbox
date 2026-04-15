@@ -78,7 +78,7 @@ def get_vcf(wildcards):
 
 def get_rnaseq(wildcards):
     """
-    Generates file list for the RNA-seq workflow.
+    placeholder.
     """
     samples = get_samples(wildcards)
     return expand("reads/{prj}/counts/{s}.counts.txt", 
@@ -97,7 +97,7 @@ rule note:
         print("  snakemake bam     - Run Alignments")
         print("  snakemake vcf     - Run vcf")
         print("  snakemake vcf_all - Run qc, bam, vcf")
-        print("  snakemake rnaseq  - Run RNA-seq analysis (unfinished)")
+        print("  snakemake rnaseq  - Run RNA-seq analysis (placeholder)")
         print("="*50 + "\n")
 
 rule qc:
@@ -132,7 +132,7 @@ rule vcf_all:
 
 rule rnaseq:
     """
-    Entry point for the RNA-seq workflow.
+    placeholder.
     """
     input: get_rnaseq
 
