@@ -36,25 +36,27 @@ def get_samples(wildcards):
 
 def get_qc(wildcards):
     """
-    Generates QC report targets and forces trimming.
+    Generates QC report targets, merge by multiqc and forces fastq trimming.
     """
     samples = get_samples(wildcards)
+    
     
     # Standard FastQC reports
     fastqc = expand("reads/{prj}/qc/{s}_{pair}_fastqc.html", 
                     prj=PRJNAME, s=samples, pair=[1, 2])
-    
+    # Summarise using multiqc
+    multiqc = f"reads/{PRJNAME}/qc/multiqc_report.html"
     # Trimmed fastq files (Note: Trim Galore naming uses _1_val_1 and _2_val_2)
     trim_r1 = expand("reads/{prj}/qc_trimmed/{s}_1_val_1.fq.gz", prj=PRJNAME, s=samples)
     trim_r2 = expand("reads/{prj}/qc_trimmed/{s}_2_val_2.fq.gz", prj=PRJNAME, s=samples)
     
     # Return a combined list of all targets
-    return fastqc + trim_r1 + trim_r2
+    return [multiqc] + fastqc + trim_r1 + trim_r2
 
 
 def get_bam(wildcards):
     """
-    Generates Bam file for aligner workflow.
+    Align, generate bam and filtered bam.
     """
     samples = get_samples(wildcards)
     aligner = config.get("ALIGNER", "bwa")
@@ -64,7 +66,7 @@ def get_bam(wildcards):
 
 def get_vcf(wildcards):
     """
-    Generates vcf.gz, merged.vcf.gz, 
+    Generates vcf.gz, merged.vcf.gz, ann.vcf 
     """
     samples = get_samples(wildcards)
     aligner = config.get("ALIGNER", "bwa") 
@@ -87,15 +89,15 @@ def get_rnaseq(wildcards):
 # 4. Terminal Rules
 rule note:
     input:
-        # Leaving this empty ensures it doesn't trigger other rules
     run:
         print("\n" + "="*50)
         print("THIS SNAKEFILE SERVICE AS TERMINAL FOR BIOINFOMATIC TOOLBOX")
         print("Please specify a target rule:")
         print("  snakemake qc      - Run FastQC")
         print("  snakemake bam     - Run Alignments")
-        print("  snakemake vcf     - Run Variant Calling")
-        print("  snakemake rnaseq  - Run RNA-seq analysis")
+        print("  snakemake vcf     - Run vcf")
+        print("  snakemake vcf_all - Run qc, bam, vcf")
+        print("  snakemake rnaseq  - Run RNA-seq analysis (unfinished)")
         print("="*50 + "\n")
 
 rule qc:
@@ -107,15 +109,26 @@ rule qc:
 
 rule bam:
     """
-    Align fastq files with index by chosen aligner
+    Align fastq files with index by chosen aligner in config.yaml
     """
     input: get_bam
 
 rule vcf:
     """
-    Entry point for the Variant Calling workflow.
+    Run vcf call, merge samples, create consensus, build snpeff db, annotate.
     """
     input: get_vcf
+
+rule vcf_all:
+    """
+    A short cut to run a full course with qc, aligner and vcf.
+    """
+    input:  
+        lambda wildcards: get_qc(wildcards),
+        lambda wildcards: get_bam(wildcards),
+        lambda wildcards: get_vcf(wildcards)
+
+
 
 rule rnaseq:
     """

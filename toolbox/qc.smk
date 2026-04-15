@@ -18,6 +18,20 @@ rule fastqc:
         fi
         """
 
+rule multiqc:
+    input:
+        # Forces the rule to wait until all individual FastQC reports exist
+        lambda wildcards: expand("reads/{prj}/qc/{s}_{pair}_fastqc.html", 
+                                 prj=PRJNAME, s=get_samples(wildcards), pair=[1, 2])
+    output:
+        f"reads/{PRJNAME}/qc/multiqc_report.html"
+    params:
+        qc_dir = f"reads/{PRJNAME}/qc/"
+    conda: "../env/multiqc.yaml"
+    shell:
+        # --force overwrites old reports, so the program wont stop if old one exist
+        "multiqc {params.qc_dir} -o {params.qc_dir} -n multiqc_report.html --force"
+
 rule trim_reads:
     """
     Handles quality trimming (tail cutting) at Phred 30.
