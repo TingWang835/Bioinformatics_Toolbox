@@ -1,6 +1,6 @@
 # Bioinfomatics-Project
 ## Snakemake bioinfomatics toolbox
-This is a bioinfomatics toolbox running on Snakemake platform via conda environment (tesed on linux).
+This is a bioinfomatics toolbox running on Snakemake platform via conda environment (tested on linux).
 
 Featuring:
 1. Centeralized control via snakefile
@@ -15,6 +15,7 @@ Featuring:
 1. Download and unpack github package under your working directory 
 2. install miniconda 3 
 3. install snakemake via miniconda 3
+
 
 ## How to run
 ### SRA online project
@@ -31,12 +32,12 @@ Featuring:
    ```bash
    bash run.sh your_project_name note 
    ```
-   6. select the function listed replacing "note" e.g.
+   6. select from functions listed replacing "note" e.g.
    ```bash
    bash run.sh your_project_name vcf_all 
    ```
 
-### local project
+### Local project
    To analyse data from your local sequencer: 
 
    1. create subdirectory: reads/your_project_name. 
@@ -51,7 +52,7 @@ Featuring:
    ```bash
    bash run.sh your_project_name note 
    ```
-   7. select the function listed replacing "note" e.g.
+   7. select from functions listed replacing "note" e.g.
    ```bash
    bash run.sh your_project_name vcf_all 
    ```
@@ -76,7 +77,7 @@ Featuring:
 
 ### aligner.smk specific variables
 7. ALIGNER: select aligner package (available: bwa, bowtie2, minimap2_sr)
-8. SAMFLAG: sam flag number for bam filtering, default = 3 (paired + proper paired), decoding by [picard samflag](https://broadinstitute.github.io/picard/explain-flags.html)
+8. SAMFLAG: sam flag number for bam filtering, default = 3 (paired + proper paired), encoding by [picard samflag](https://broadinstitute.github.io/picard/explain-flags.html)
 9. MAPQ: mapping quality score for bam filtering
 
 ### vcf.smk specific variables

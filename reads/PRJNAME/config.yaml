@@ -4,22 +4,23 @@ ACC: "AF086833"
 # Reference name
 REFNAME: "ebola_1976"
 
-#PRJN number (only used in getrefs)
+#PRJN number (only used in getdata_sra)
 PRJNUMBER: "PRJNA257197"
 
 # Project name
 PRJNAME: "ebola_2014"
 
 
+
 ## getdata.smk specific variables
+# choose Data source for LOCAL or SRA 
+#LOCAL: create a runinfo.csv from items under reads/{PRJNAME}
+#SRA: if runinfo.csv exist: download SRRs from runinfo.csv, else query for runinfo.csv from SRA metadata
+DSOURCE: "SRA"
 
 # Get how many number of reads from original fastq
 N: "10000"
 
-# choose Data source for LOCAL or SRA 
-#LOCAL: create a runinfo.csv from items under reads/{PRJNAME}
-#SRA: if runinfo.csv exist: download SRRs from runinfo.csv, else query runinfo.csv from SRA metadata
-DSOURCE: "SRA"
 
 
 ## aligner.smk specific variables
@@ -31,6 +32,7 @@ SAMFLAG: "3"
 
 # choose Mapping Quality score for filter bam
 MAPQ: "30"
+
 
 
 #vcf.smk specific variables
