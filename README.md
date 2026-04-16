@@ -1,39 +1,80 @@
 # Bioinfomatics-Project
-## Main contents
-This project contains codes for automating bioinformatics processes using management serves from Snakemake and Nextflow;
-Automating processes includes:
-1. fastq and fasta loading
-2. aligning (bam)
-3. bam filtering
-4. vcf calling
-5. vcf filter
-6. variant annotation
+## Snakemake bioinfomatics toolbox
+This is a bioinfomatics toolbox running on Snakemake platform via conda environment (tesed on linux).
 
-Snakemake: 
-The snakemake file was designed to utilize its ability to streamline commands for a wild variety of bioinfommatics packages (bwa, minimap2, bedtools vcftools etc) from a centeralize Snakemake file under the main directory, while storing project specific variables and parameters under respective directories as config,yaml, which allows managing multiple projects extremely easy.
+Featuring:
+1. Centeralized control via snakefile
+2. Modularized bioinfo "tools", runs specific task, easy to maintain
+3. Portable and readily mangable environments
+4. Stand alone reference folder, allows ref sharing across projects
+5. Project specific config.yaml, records variables, allows quick and easy switch between projects
+6. Organized logs and project_map, AI agent ready!
 
-After Snakemake run analysis the directory will manage files neatly as example shown below
 
- workstation_repository/
-├── workflow/
-│    ├── Snakefile
-│    └── envs/
-│         ├── aligners.yaml
-│         ├── multiqc.yaml
-│         └── r_plots.yaml
-├── reads/
-│     └── project_name/
-│          ├── read_1.fastq
-│          ├── read_2.fastq
-│          ├── config.yaml
-│          └── bam/
-│               └── alignment.bam
-└── refs/
-│    └── ref_name/ 
-│          ├── ref,fa
-│          ├── ref,gb
-│          ├── ref.gff
-│          ├── bwa/
-│               └── various_index_files
-│          ├── bowtie2/
-│          └── minimap2/
+## Folder Structure
+```text
+Working Directory 
+├── databases                     (databases built in analysis)
+│   └── snpeff
+│       └── {REFNAME}
+│           ├── sequence.bin
+│           ├── snpEff.config
+│           └── snpEffectPredictor.bin
+│
+├── env                            (portable environment configs)
+│   └── example.yaml
+│ 
+├── reads
+│   └── [PRJNAME]
+│       ├── logs                   (log files for AI agent)
+│       ├── bam                    (bam file and index)
+│       │   └── filtered           (filtered bam files and index)
+│       ├── qc                     (fastqc and multiqc files)
+│       ├── qc_trimmed             (trimmed fastq files)
+│       ├── vcf                    (merged, normalized, annotated vcf files)
+│       │   └── consensus          (consensus fastq files)
+│       ├── config.yaml            (project specific variables)
+│       ├── sra/local_runinfo.csv  (sample list)
+│       ├── sample_1.fastq
+│       └── sample_2.fastq
+│
+├── refs
+│   └── [REFNAME]
+│       ├── ACC.fa
+│       ├── ACC.fa.fai
+│       ├── ACC.gff
+│       └── aligner.index
+│
+├── toolbox                        (modularized tools)
+│   ├── aligner.smk
+│   ├── getdata.smk
+│   ├── qc.smk
+│   └── vcf.smk
+│
+├── Snakefile                      (central control)
+├── run.sh                         (command shortcut)
+├── bcfquery.sh                    (commands to query annotated vcf)
+├── PROJECT_MAP.md                 (project map for AI agent)
+└── README.md
+
+```
+
+## How to Setup
+1. Download and unpack github package under your working directory 
+2. install miniconda 3 
+3. install snakemake via miniconda 3
+
+## How to run
+### SRA online project
+   To analysis data requires downloading from SRA: \
+   a. create subdirectory: reads/[your_project_name] \
+   b. copy reads/[PRJNAME]/config.yaml to path above\
+   c. enter your project specific variables \
+   d. activate your snakemake environment e.g.:   
+    ```bash
+    conda activate snakemake
+    ```  
+   e. run in terminal: 
+   ```bash
+   bash run.sh [your_project_name] vcf_all
+   ```
