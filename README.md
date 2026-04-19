@@ -1,6 +1,7 @@
 # Bioinfomatics-Project
 ## Snakemake bioinfomatics toolbox
 This is a bioinfomatics toolbox running on Snakemake platform via conda environment (tested on linux).
+Main purposse: to partially/fully automate bioinfo analysis using existing packages but with less commands
 
 Featuring:
 1. Centeralized control via snakefile
@@ -39,7 +40,7 @@ Featuring:
    ```bash
    ./run.sh your_project_name note 
    ```
-   6. select from functions listed replacing "note" e.g.
+   6. select from functions listed, replacing "note" e.g.
    ```bash
    ./run.sh your_project_name vcf_all 
    ```
@@ -62,7 +63,7 @@ Featuring:
    ```bash
    ./run.sh your_project_name note 
    ```
-   7. select from functions listed replacing "note" e.g.
+   7. select from functions listed, replacing "note" e.g.
    ```bash
    ./run.sh your_project_name vcf_all 
    ```
@@ -117,7 +118,7 @@ Working Directory
 │           └── snpEffectPredictor.bin
 │
 ├── env                            (portable environment configs)
-│   └── example.yaml
+│   └── example_env.yaml
 │ 
 ├── reads
 │   └── [PRJNAME]
@@ -141,11 +142,11 @@ Working Directory
 │       ├── ACC.gff
 │       └── aligner.index
 │
-├── toolbox                        (modularized tools)
-│   ├── aligner.smk
-│   ├── getdata.smk
-│   ├── qc.smk
-│   └── vcf.smk
+├── toolbox                        (Store modularized tools)
+│   ├── aligner.smk                (align trimmed fastq to refs to create bam and filtered bam)
+│   ├── getdata.smk                (download/register fastq under reads/PRJNAME, download fa and gff from SRA and create index)
+│   ├── qc.smk                     (QC fastq files and trim)
+│   └── vcf.smk                    (call, merge, norm and annotate vcf, also creates consensus fastq)
 │
 ├── Snakefile                      (central control)
 ├── run.sh                         (command shortcut)
