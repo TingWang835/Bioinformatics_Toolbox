@@ -40,7 +40,6 @@ MAPQ: "30"
 # viral/haploid: 1 ,   human/diploid: 2
 PLOIDY: "1"
 
-
 #SnpEFF RAM usage
 #choose RAM usage for vcf annotation (default at 4g)
 #this variable is used in rule download_snpEff_db vcfannotation and 
