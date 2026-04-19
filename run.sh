@@ -8,7 +8,8 @@ TARGET=$2 #capture 2nd word
 # Validation: Ensure project and target are provided
 if [ -z "$PRJ" ] || [ -z "$TARGET" ]; then
     echo "Usage: bash run.sh [project_name] [target]"
-    echo "Available targets: qc, bam, vcf, rnaseq"
+    echo "e.g. bash run.sh ebola_2014 vcf_all"
+    echo "Available targets: qc, bam, vcf, vcf_all"
     exit 1
 fi
 

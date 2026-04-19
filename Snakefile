@@ -70,10 +70,11 @@ def get_vcf(wildcards):
     """
     samples = get_samples(wildcards)
     aligner = config.get("ALIGNER", "bwa") 
-    annvcf =  f"reads/{PRJNAME}/vcf/all_samples.{aligner}.ann.vcf"
+    annvcf =  f"reads/{PRJNAME}/vcf/all_samples.{aligner}.ann.vcf.gz"
+    anntbi =  f"reads/{PRJNAME}/vcf/all_samples.{aligner}.ann.vcf.gz.tbi"
     annstats = f"reads/{PRJNAME}/vcf/all_samples.{aligner}.snpeff_stats.html"
     consensus = expand("reads/{prj}/vcf/consensus/{s}.{aln}.consensus.fa", prj=PRJNAME, s=samples, aln=aligner)
-    return [annvcf, annstats] + consensus
+    return [annvcf, anntbi, annstats] + consensus
     
 
 def get_rnaseq(wildcards):
@@ -97,7 +98,7 @@ rule note:
         print("  snakemake bam     - Run Alignments")
         print("  snakemake vcf     - Run vcf")
         print("  snakemake vcf_all - Run qc, bam, vcf")
-        print("  snakemake rnaseq  - Run RNA-seq analysis (placeholder)")
+        print("  snakemake rnaseq  - Run RNA-seq analysis (place holder)")
         print("="*50 + "\n")
 
 rule qc:

@@ -1,4 +1,3 @@
-# vcf.smk
 localrules: vcfcall, vcfmerge, vcfnorm, vcfconsensus, download_snpeff_db, vcfannotation
 
 rule vcfcall:
@@ -117,7 +116,8 @@ rule vcfannotation:
         vcf = f"reads/{PRJNAME}/vcf/all_samples.{{aligner}}.merged.norm.vcf.gz",
         db = f"databases/snpeff/{config['REFNAME']}/snpEffectPredictor.bin" 
     output:
-        vcf = f"reads/{PRJNAME}/vcf/all_samples.{{aligner}}.ann.vcf",
+        vcf = f"reads/{PRJNAME}/vcf/all_samples.{{aligner}}.ann.vcf.gz",
+        tbi = f"reads/{PRJNAME}/vcf/all_samples.{{aligner}}.ann.vcf.gz.tbi",
         stats = f"reads/{PRJNAME}/vcf/all_samples.{{aligner}}.snpeff_stats.html"
     params:
         genome = config['REFNAME'],
@@ -130,10 +130,58 @@ rule vcfannotation:
         """
         # Capture current directory to prevent path doubling
         ABS_PATH=$(pwd)
-
         snpEff -Xmx{params.ram} ann \
             -c $ABS_PATH/{params.config_path} \
             -dataDir $ABS_PATH/{params.db_dir} \
+            -s {output.stats} \
             {params.genome} \
-            {input.vcf} > {output.vcf} -stats {output.stats}
+            {input.vcf} | bcftools view -Oz -o {output.vcf}
+        
+        # Index the new file to create the .tbi
+        bcftools index -t {output.vcf}
+        """
+        
+rule vcf_interactive_query:
+    input:
+        vcf = f"reads/{PRJNAME}/vcf/all_samples.{config['ALIGNER']}.ann.vcf.gz",
+        tbi = f"reads/{PRJNAME}/vcf/all_samples.{config['ALIGNER']}.ann.vcf.gz.tbi"
+    output:
+        report = f"reads/{PRJNAME}/vcf/query/{{query_id}}.csv"
+    params:
+        region = lambda w: f"-r {str(config.get('REGION', '')).split('=')[-1]}" if config.get('REGION') else "",
+        include = lambda w: f"-i '{str(config.get('INCLUDE', '')).split('=')[-1]}'" if config.get('INCLUDE') else "",
+        v_type = lambda w: f"-i 'TYPE=\"{str(config.get('VTYPE', '')).split('=')[-1]}\"'" if config.get('VTYPE') else "",
+
+        fmt = config.get("FMT", "%CHROM,%POS,%REF,%ALT,[%GT],%INFO/ANN\\n")
+    conda: "../env/vcf.yaml"
+    shell:
+        """
+        mkdir -p reads/{PRJNAME}/vcf/query
+        
+        # Header with metadata for future reference
+        echo "# Query Date: $(date)" > {output.report}
+        echo "# Parameters: {params.region} {params.include} {params.v_type}" >> {output.report}
+        echo "CHROM,POS,REF,ALT,GT,ANNOTATION" >> {output.report}
+        
+        bcftools query {params.region} {params.include} {params.v_type} \
+            -f '{params.fmt}' {input.vcf} >> {output.report}
+        """
+
+rule vcf_filter_by_query:
+    input:
+        vcf = f"reads/{PRJNAME}/vcf/all_samples.{config['ALIGNER']}.ann.vcf.gz",
+        tbi = f"reads/{PRJNAME}/vcf/all_samples.{config['ALIGNER']}.ann.vcf.gz.tbi"
+    output:
+        vcf = f"reads/{PRJNAME}/vcf/query/{{query_id}}.vcf.gz",
+        tbi = f"reads/{PRJNAME}/vcf/query/{{query_id}}.vcf.gz.tbi"
+    params:
+        region = lambda w: f"-r {str(config.get('REGION', '')).split('=')[-1]}" if config.get('REGION') else "",
+        include = lambda w: f"-i '{str(config.get('INCLUDE', '')).split('=')[-1]}'" if config.get('INCLUDE') else "",
+        # bcftools view uses -v indels directly
+        v_type = lambda w: f"-v {str(config.get('VTYPE', '')).split('=')[-1]}" if config.get('VTYPE') else ""
+    conda: "../env/vcf.yaml"
+    shell:
+        """
+        bcftools view {params.region} {params.include} {params.v_type} -O z -o {output.vcf} {input.vcf}
+        bcftools index -t {output.vcf}
         """
