@@ -127,7 +127,7 @@ Working Directory
 │       ├── qc                     (fastqc and multiqc files)
 │       ├── qc_trimmed             (trimmed fastq files)
 │       ├── vcf                    (merged, normalized, annotated vcf files)
-│           ├── consensus          (consensus fastq files)
+│       │   ├── consensus          (consensus fastq files)
 │       │   └── query              (stores query.csv, query.vcf.gz and index)
 │       ├── config.yaml            (project specific variables)
 │       ├── sra/local_runinfo.csv  (sample list)
