@@ -15,26 +15,33 @@ Featuring:
 1. Download and unpack github package under your working directory 
 2. install miniconda 3 
 3. install snakemake via miniconda 3
+4. run following command in terminal (first time only), to allow excution of run.sh and bcfquery.sh
+```bash
+ chmod +x run.sh
+ chmod +x bcfquery.sh
+``` 
 
-
-## How to run
+## How to run VCF
 ### SRA online project
    To analyse data requires downloading from SRA: 
 
    1. create subdirectory: reads/your_project_name. 
    2. copy reads/PRJNAME/config.yaml to path above.
-   3. enter your project specific variables. 
+   3. enter your project specific variables, make sure:
+   ```bash
+    DSOURCE: "SRA"
+   ```
    4. activate your snakemake environment e.g.   
    ```bash
     conda activate snakemake
    ```  
    5. run the following command in terminal 
    ```bash
-   bash run.sh your_project_name note 
+   ./run.sh your_project_name note 
    ```
    6. select from functions listed replacing "note" e.g.
    ```bash
-   bash run.sh your_project_name vcf_all 
+   ./run.sh your_project_name vcf_all 
    ```
 
 ### Local project
@@ -43,25 +50,38 @@ Featuring:
    1. create subdirectory: reads/your_project_name. 
    2. copy local fq/fastq/fq.gz file(s) to subdirectory above, a local_runinfo.csv will be generated based on sample names.
    3. copy reads/PRJNAME/config.yaml to the same path.
-   4. enter your project specific variables. 
+   4. enter your project specific variables, make sure:
+   ```bash
+    DSOURCE: "LOCAL"
+   ``` 
    5. activate your snakemake environment e.g.   
    ```bash
     conda activate snakemake
    ```  
    6. run the following command in terminal 
    ```bash
-   bash run.sh your_project_name note 
+   ./run.sh your_project_name note 
    ```
    7. select from functions listed replacing "note" e.g.
    ```bash
-   bash run.sh your_project_name vcf_all 
+   ./run.sh your_project_name vcf_all 
    ```
 
 ### Running selected samples
-  if you would like to analysis a selected group(s) of samples, delete the unwanted rows from local/sra_runinfo.csv, sample name(s) listed in runinfo.csv will determine which sample(s) will be analysed.
+  if you would like to analysis a selected group(s) of samples, remove the unwanted rows from local/sra_runinfo.csv, sample name(s) listed in runinfo.csv will determine which sample(s) will be analysed.
 
-### VCF query
-   
+
+### bcfquery.sh
+   this is a shortcut built to run:
+   1. vcf_interactive_query, to generate query.csv by bcftools query
+   2. vcf_filter_by_query, to generate query.vcf.gz and index by using the same query condition(s)
+#### How to run it
+```bash
+  ./bcfquery your_project_name REGION="Chr1:100-500" INCLUDE="QUAL>50" VTYPE="indels"
+  # or
+  ./bcfquery your_project_name VTYPE="indels"
+ ```
+   Query condition can be choosen from REGION, INCLUDE and VTYPE (for now)
 
 
 ## Variables in config.yaml (What they do)
@@ -107,7 +127,8 @@ Working Directory
 │       ├── qc                     (fastqc and multiqc files)
 │       ├── qc_trimmed             (trimmed fastq files)
 │       ├── vcf                    (merged, normalized, annotated vcf files)
-│       │   └── consensus          (consensus fastq files)
+│           ├── consensus          (consensus fastq files)
+│       │   └── query              (stores query.csv, query.vcf.gz and index)
 │       ├── config.yaml            (project specific variables)
 │       ├── sra/local_runinfo.csv  (sample list)
 │       ├── sample_1.fastq
