@@ -88,7 +88,7 @@ Featuring:
    ```
 
 ### Running selected samples
-  This toolbox uses local/sra_runinfo.csv as a list to dettermine which sample will be analysed.
+  This toolbox uses local/sra_runinfo.csv as a list to determine which sample will be analysed.
 
   In a SRA project, runinfo.csv will be downloaded using the PRJNMUBER variable.
 
