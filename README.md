@@ -109,6 +109,14 @@ Featuring:
  ```
    Query condition can be choosen from REGION, INCLUDE and VTYPE (for now)
 
+### Cleanup
+   For Snakemake to accept both single and paired end sequences without throwing a "tamturm", dummy r2 files are created in multiple steps.
+
+   To clean up the dummy files, use command in terminal:
+   ```bash
+   ./run.sh your_project_name cleanup
+   ```
+   !!! Only use this function after all analysis were done, snakemake will re-create these files when further analysis was conducted !!!
 
 
 ## Variables in config.yaml (What they do)
@@ -172,7 +180,8 @@ Working Directory
 │   ├── getdata.smk                (download/register fastq under reads/PRJNAME, download fa and gff from SRA and create index)
 │   ├── qc.smk                     (QC fastq files and trim)
 │   ├── aligner.smk                (align trimmed fastq to refs to create bam and filtered bam)
-│   └── vcf.smk                    (call, merge, norm and annotate vcf, also creates consensus fastq)
+│   ├── vcf.smk                    (call, merge, norm and annotate vcf, also creates consensus fastq)
+│   └── cleanup.smk                (cleaning up dummy r2 files created from running single end sequences)
 │
 ├── Snakefile                      (central control)
 ├── run.sh                         (command shortcut)

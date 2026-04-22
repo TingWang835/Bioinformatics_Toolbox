@@ -13,7 +13,8 @@ configfile: f"reads/{PRJNAME}/config.yaml"
 include: "toolbox/getdata.smk" 
 include: "toolbox/qc.smk" 
 include: "toolbox/aligner.smk" 
-include: "toolbox/vcf.smk"  
+include: "toolbox/vcf.smk" 
+include: "toolbox/cleanup.smk"
 # include: "toolbox/rnaseq.smk" 
 
 # 3. Get Functions
@@ -99,6 +100,7 @@ rule note:
         print("  snakemake vcf     - Run vcf")
         print("  snakemake vcf_all - Run qc, bam, vcf")
         print("  snakemake rnaseq  - Run RNA-seq analysis (place holder)")
+        print("  snakemake cleanup  - clean up dummy R2 files from single end sequencing")
         print("="*50 + "\n")
 
 rule qc:
@@ -139,7 +141,11 @@ rule rnaseq:
 
 
 
-
+rule cleanup:
+    """
+    Cleaning up all dummy R2 files created from single end sequencing
+    """
+    input: f"reads/{PRJNAME}/logs/cleanup_complete.done"
 
 
 
