@@ -22,7 +22,7 @@ checkpoint getdata_local:
         for f in reads/{PRJNAME}/*_1.fast*; do
             base=$(basename $f | sed 's/_1.fast.*//')
 
-            # Check if _2.fast* exists AND is not an empty dummy file
+            # Check if _2.fast* exists, determine library layout (SE/PE)
             if [ -s "reads/{PRJNAME}/${{base}}_2.fast*" ]; then
                 echo "$base,PAIRED" >> {output.csv}
             else
