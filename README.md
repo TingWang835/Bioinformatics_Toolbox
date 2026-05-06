@@ -125,7 +125,7 @@ Featuring:
 ### What is it?
 It is a pet project inspired by Gemini 3.0 when we chatted about TurboQuant where we found similarity between the this latest spherical compression logic and the mechanism of DNA compression by histone.
 
-### How to score DNA rigidity
+### How to score DNA rigidity?
    1. Create subdirectory: reads/your_project_name. 
    2. Copy reads/PRJNAME/config.yaml to path above.
    3. Enter the variables for downloading the right reference. (ACC and REFNAME)
@@ -137,7 +137,7 @@ It is a pet project inspired by Gemini 3.0 when we chatted about TurboQuant wher
    ```bash
    ./run.sh your_project_name rigid 
    ```
-   6. tsv and bedgraph files will be produced with chromosome as id, position and rigidity score. for AT rich rigid position the score is 5.0, and GC rich flexible -3.0, baseline/default is 0.0, bedgraph can be piped into IGV for paralleled comparison with other results.
+   6. tsv and bedgraph files will be produced with chromosome as id, position and rigidity score. For AT rich rigid position the score is 5.0, and GC rich flexible position: -3.0, baseline/default: 0.0, bedgraph can be piped into IGV for paralleled comparison with other results.
 
 
 
@@ -189,7 +189,7 @@ Working Directory
 │       ├── vcf                    (merged, normalized, annotated vcf files)
 │       │   ├── consensus          (consensus fastq files)
 │       │   └── query              (stores query.csv, query.vcf.gz and index)
-│       ├── dna_rigidity           (tsv and bedgraph files for DNA rigidity scores)
+│       ├── dna_rigidity           (tsv and bedgraph files containing DNA rigidity scores)
 │       ├── config.yaml            (project specific variables)
 │       ├── sra/local_runinfo.csv  (sample list)
 │       ├── sample_1.fastq
