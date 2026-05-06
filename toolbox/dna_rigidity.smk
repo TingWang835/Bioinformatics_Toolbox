@@ -12,6 +12,7 @@ rule detect_dna_rigidity:
         tsv = f"reads/{PRJNAME}/dna_rigidity/{config['ACC']}_rigidity_profile.tsv"
     conda:
         "../env/rigidity.yaml"
+    log: f"reads/{PRJNAME}/logs/dna_rigidity/{config['ACC']}_rigidity_profile.tsv.log"
     params:
         script = "toolbox/scripts/dna_rigidity.py"
     shell:
@@ -23,5 +24,6 @@ rule generate_igv_track:
         tsv = f"reads/{PRJNAME}/dna_rigidity/{config['ACC']}_rigidity_profile.tsv"
     output:
         bg = f"reads/{PRJNAME}/dna_rigidity/{config['ACC']}_rigidity_profile.bedGraph"
+    log: f"reads/{PRJNAME}/logs/dna_rigidity/{config['ACC']}_rigidity_profile.bg.log"
     shell:
         "awk 'NR>1 {{print $1 \"\\t\" $2 \"\\t\" $2+1 \"\\t\" $3}}' {input.tsv} > {output.bg}"
