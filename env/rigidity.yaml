@@ -1,0 +1,10 @@
+name: rigidity_env
+channels:
+  - conda-forge
+  - bioconda
+dependencies:
+  - python=3.12
+  - biopython
+  - numpy >=1.26
+  - pandas 
+  - matplotlib

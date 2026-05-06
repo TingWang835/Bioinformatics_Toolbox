@@ -15,6 +15,7 @@ include: "toolbox/qc.smk"
 include: "toolbox/aligner.smk" 
 include: "toolbox/vcf.smk" 
 include: "toolbox/cleanup.smk"
+include: "toolbox/dna_rigidity.smk"
 # include: "toolbox/rnaseq.smk" 
 
 # 3. Get Functions
@@ -77,6 +78,13 @@ def get_vcf(wildcards):
     consensus = expand("reads/{prj}/vcf/consensus/{s}.{aln}.consensus.fa", prj=PRJNAME, s=samples, aln=aligner)
     return [annvcf, anntbi, annstats] + consensus
     
+def get_rigid(wildcards):
+    """
+    Generates ACC_rigidity_profile.tsv and ACC_rigidity_profile.bedgraph
+    """ 
+    tsv = f"reads/{PRJNAME}/dna_rigidity/{config['ACC']}_rigidity_profile.tsv"
+    bg = f"reads/{PRJNAME}/dna_rigidity/{config['ACC']}_rigidity_profile.bedGraph"
+    return [tsv, bg]
 
 def get_rnaseq(wildcards):
     """
@@ -97,8 +105,9 @@ rule note:
         print("Please specify a target rule:")
         print("  snakemake qc      - Run FastQC")
         print("  snakemake bam     - Run Alignments")
-        print("  snakemake vcf     - Run vcf")
-        print("  snakemake vcf_all - Run qc, bam, vcf")
+        print("  snakemake vcf     - Run VCF")
+        print("  snakemake vcf_all - Run FastQC, Alignments, VCF")
+        print("  snakemake rigid   - Run dna rigidity score on fasta")
         print("  snakemake rnaseq  - Run RNA-seq analysis (place holder)")
         print("  snakemake cleanup  - clean up dummy R2 files from single end sequencing")
         print("="*50 + "\n")
@@ -131,7 +140,11 @@ rule vcf_all:
         lambda wildcards: get_bam(wildcards),
         lambda wildcards: get_vcf(wildcards)
 
-
+rule rigid: 
+    """
+    run dna rigidity score on fasta
+    """
+    input: get_rigid
 
 rule rnaseq:
     """
