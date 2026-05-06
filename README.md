@@ -13,8 +13,8 @@ Featuring:
 6. Stand alone Reference folder, allows ref sharing across projects, saving spaces, easier management.
 7. Organized logs and project_map, AI agent ready!
 
-
-## Setup Miniconda 3
+# 1. How to Setup 
+## 1.1 Setup Miniconda 3
    1. Downlaod latest miniconda 3
    ```bash
       wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh
@@ -28,7 +28,7 @@ Featuring:
       source ~/.bashrc
    ```
 
-## Setup Snakemake
+## 1.2 Setup Snakemake
    1. Download and unpack github package under your working directory.
    2. Makesure environment.yml is in the working dir.
    3. Move terminal to working dir and run:
@@ -41,7 +41,8 @@ Featuring:
       chmod +x bcfquery.sh
    ``` 
 
-## How to run VCF in the toolbox
+# 2. Toolbox Functions
+## 2.1 How to Run VCF 
 ### SRA online project
    To analyse data requires downloading from SRA: 
 
@@ -101,7 +102,7 @@ Featuring:
    this is a shortcut built to run:
    1. vcf_interactive_query, to generate query.csv by bcftools query
    2. vcf_filter_by_query, to generate query.vcf.gz and index by using the same query condition(s)
-#### How to run it
+#### Quick way to query
 ```bash
   ./bcfquery your_project_name REGION="Chr1:100-500" INCLUDE="QUAL>50" VTYPE="indels"
   # or
@@ -119,7 +120,31 @@ Featuring:
    !!! Only use this function after all analysis were done, snakemake will re-create these files when further analysis was conducted !!!
 
 
-## Variables in config.yaml (What they do)
+
+## 2.2 DNA rigidity score
+### What is it?
+It is a pet project inspired by Gemini 3.0 when we chatted about TurboQuant where we found similarity between the this latest spherical compression logic and the mechanism of DNA compression by histone.
+
+### How to score DNA rigidity
+   1. Create subdirectory: reads/your_project_name. 
+   2. Copy reads/PRJNAME/config.yaml to path above.
+   3. Enter the variables for downloading the right reference. (ACC and REFNAME)
+   4. activate your snakemake environment e.g.   
+   ```bash
+    conda activate snakemake
+   ```  
+   5. run the following command in terminal.
+   ```bash
+   ./run.sh your_project_name rigid 
+   ```
+   6. tsv and bedgraph files will be produced with chromosome as id, position and rigidity score. for AT rich rigid position the score is 5.0, and GC rich flexible -3.0, baseline/default is 0.0, bedgraph can be piped into IGV for paralleled comparison with other results.
+
+
+
+
+
+
+# 3. Variables in config.yaml (What they do)
 ### Common variables
 1. ACC: identify reference (fa and gff3) for download; 
 2. REFNAME: naming subdirectory for reference files under refs/
@@ -164,6 +189,7 @@ Working Directory
 │       ├── vcf                    (merged, normalized, annotated vcf files)
 │       │   ├── consensus          (consensus fastq files)
 │       │   └── query              (stores query.csv, query.vcf.gz and index)
+│       ├── dna_rigidity           (tsv and bedgraph files for DNA rigidity scores)
 │       ├── config.yaml            (project specific variables)
 │       ├── sra/local_runinfo.csv  (sample list)
 │       ├── sample_1.fastq
@@ -177,10 +203,13 @@ Working Directory
 │       └── aligner.index
 │
 ├── toolbox                        (Store modularized tools)
+│   └── scripts                    (original scripts)
+│   │   └── dna_rigidity.py        (a script for DNA rigidity score recorded in .tsv) 
 │   ├── getdata.smk                (download/register fastq under reads/PRJNAME, download fa and gff from SRA and create index)
 │   ├── qc.smk                     (QC fastq files and trim)
 │   ├── aligner.smk                (align trimmed fastq to refs to create bam and filtered bam)
 │   ├── vcf.smk                    (call, merge, norm and annotate vcf, also creates consensus fastq)
+│   ├── dna_rigidity.smk           (run DNA rigidity on histone using fasta reference, rigid:5, flexible:-3, baseline:0)
 │   └── cleanup.smk                (cleaning up dummy r2 files created from running single end sequences)
 │
 ├── Snakefile                      (central control)
