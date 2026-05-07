@@ -11,7 +11,7 @@ rule detect_dna_rigidity:
     output:
         tsv = f"reads/{PRJNAME}/dna_rigidity/{config['ACC']}_rigidity_profile.tsv"
     conda:
-        "../env/rigidity.yaml"
+        "../env/dna_rigidity.yaml"
     log: f"reads/{PRJNAME}/logs/dna_rigidity/{config['ACC']}_rigidity_profile.tsv.log"
     params:
         script = "toolbox/scripts/dna_rigidity.py"

@@ -29,7 +29,7 @@ rule bwa_index:
     input: ref = f"refs/{config['REFNAME']}/{config['ACC']}.fa"
     output: multiext(f"refs/{config['REFNAME']}/bwa", ".amb", ".ann", ".bwt", ".pac", ".sa")
     log: f"reads/{PRJNAME}/logs/aligner/bwa_index.log"
-    conda: "../env/aligner.yaml"
+    conda: "../env/dna_aligner.yaml"
     params: prefix = f"refs/{config['REFNAME']}/bwa"
     shell: "bwa index {input.ref} -p {params.prefix} > {log} 2>&1"
     
@@ -38,7 +38,7 @@ rule bowtie2_index:
     input: ref = f"refs/{config['REFNAME']}/{config['ACC']}.fa"
     output: multiext(f"refs/{config['REFNAME']}/bowtie2", ".1.bt2", ".2.bt2", ".3.bt2", ".4.bt2", ".rev.1.bt2", ".rev.2.bt2")
     log: f"reads/{PRJNAME}/logs/aligner/bowtie2_index.log"
-    conda: "../env/aligner.yaml"
+    conda: "../env/dna_aligner.yaml"
     params: prefix = f"refs/{config['REFNAME']}/bowtie2"
     shell: "bowtie2 build {input.ref} {params.prefix} > {log} 2>&1"
 
@@ -46,7 +46,7 @@ rule minimap2_index:
     input: ref = f"refs/{config['REFNAME']}/{config['ACC']}.fa"
     output: f"refs/{config['REFNAME']}/minimap2.mmi"
     log: f"reads/{PRJNAME}/logs/aligner/minimap2_index.log"
-    conda: "../env/aligner.yaml"
+    conda: "../env/dna_aligner.yaml"
     shell: "minimap2 -d {output} {input.ref} > {log} 2>&1"
 
 rule align:
@@ -58,7 +58,7 @@ rule align:
         bam = temp(f"reads/{PRJNAME}/bam/{{sample}}.{{aligner}}.raw.bam"),
         bai = temp(f"reads/{PRJNAME}/bam/{{sample}}.{{aligner}}.raw.bam.bai")
     log: f"reads/{PRJNAME}/logs/aligner/align/{{sample}}.{{aligner}}.log"
-    conda: "../env/aligner.yaml"
+    conda: "../env/dna_aligner.yaml"
     params:
         tag = get_tag,
         # Strip the extension for bwa/bowtie2 so they get the prefix
@@ -93,7 +93,7 @@ rule filter_bam:
     output:
         filtered = f"reads/{PRJNAME}/bam/filtered/{{sample}}.{{aligner}}.filtered.bam"
     log: f"reads/{PRJNAME}/logs/aligner/filter_bam/{{sample}}.{{aligner}}.log"
-    conda: "../env/aligner.yaml"
+    conda: "../env/dna_aligner.yaml"
     params:
         mapq = config.get("MAPQ", "30"),
         samflag = config.get("SAMFLAG", "3")

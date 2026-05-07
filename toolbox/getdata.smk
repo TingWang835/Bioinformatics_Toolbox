@@ -97,7 +97,7 @@ rule samtools_faidx:
         ref = f"refs/{config['REFNAME']}/{config['ACC']}.fa"
     output:
         fai = f"refs/{config['REFNAME']}/{config['ACC']}.fa.fai"
-    conda: "../env/aligner.yaml"
+    conda: "../env/dna_aligner.yaml"
     log: f"reads/{PRJNAME}/logs/getdata/samtools_faidx_{{config['ACC']}}.log"
     shell:
         "samtools faidx {input.ref} > {log} 2>&1"

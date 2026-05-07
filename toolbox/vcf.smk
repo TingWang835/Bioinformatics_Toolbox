@@ -10,7 +10,7 @@ rule vcfcall:
         tbi = temp(f"reads/{PRJNAME}/vcf/raw/{{sample}}.{{aligner}}.vcf.gz.tbi")
     params:
         ploidy = config.get("PLOIDY", 2)
-    conda: "../env/vcf.yaml"
+    conda: "../env/dna_vcf.yaml"
     log: f"reads/{PRJNAME}/logs/vcf/vcfcall/{{sample}}.{{aligner}}.log"
     shell:
         """
@@ -25,7 +25,7 @@ rule vcfmerge:
         #create a list of filepaths e.g. (reads/PRJNAME/vcf/raw/SRR001, reads/PRJNAME/vcf/raw/SRR002)
     output:
         merged_vcf = f"reads/{PRJNAME}/vcf/all_samples.{{aligner}}.merged.vcf.gz"
-    conda: "../env/vcf.yaml"
+    conda: "../env/dna_vcf.yaml"
     log: f"reads/{PRJNAME}/logs/vcf/vcfmerge/all_sample.{{aligner}}.merged.log"
     shell:
         "bcftools merge {input.vcfs} -Oz -o {output.merged_vcf}"
@@ -37,7 +37,7 @@ rule vcfnorm:
     output:
         vcf_gz = f"reads/{PRJNAME}/vcf/all_samples.{{aligner}}.merged.norm.vcf.gz",
         tbi = f"reads/{PRJNAME}/vcf/all_samples.{{aligner}}.merged.norm.vcf.gz.tbi"
-    conda: "../env/vcf.yaml"
+    conda: "../env/dna_vcf.yaml"
     log: f"reads/{PRJNAME}/logs/vcf/vcfnorm/all_samples.{{aligner}}.merged.norm.log"
     shell:
         """
@@ -52,7 +52,7 @@ rule vcfconsensus:
         ref = f"refs/{config['REFNAME']}/{config['ACC']}.fa"
     output:
         fasta = f"reads/{PRJNAME}/vcf/consensus/{{sample}}.{{aligner}}.consensus.fa"
-    conda: "../env/vcf.yaml"
+    conda: "../env/dna_vcf.yaml"
     log: f"reads/{PRJNAME}/logs/vcf/vcfconsensus/{{sample}}.{{aligner}}.consensus.log"
     shell:
         "bcftools consensus -f {input.ref} -s {wildcards.sample} {input.vcf} > {output.fasta}"
@@ -64,7 +64,7 @@ rule vcfconsensus:
 #     params:
 #         db = config.get("SNPEFF_DB", "EBOLA_VIRUS_GENOME"),
 #         ram = config.get("RAM", "4g")
-#     conda: "../env/vcf.yaml"
+#     conda: "../env/dna_vcf.yaml"
 #     log: f"reads/{PRJNAME}/logs/vcf/snpeff_download.log"
 #     shell:
 #         """
@@ -80,7 +80,7 @@ rule snpeff_build:
     params:
         genome = config['REFNAME'],
         db_dir = "databases/snpeff"
-    conda: "../env/vcf.yaml"
+    conda: "../env/dna_vcf.yaml"
     log: f"reads/{PRJNAME}/logs/vcf/snpeff_build_{config['REFNAME']}.log"
     shell:
         """
@@ -124,7 +124,7 @@ rule vcfannotation:
         ram = config.get("RAM", "4g"),
         config_path = f"databases/snpeff/{config['REFNAME']}/snpEff.config",
         db_dir = "databases/snpeff"
-    conda: "../env/vcf.yaml"
+    conda: "../env/dna_vcf.yaml"
     log: f"reads/{PRJNAME}/logs/vcf/vcfannotation/all_samples.{{aligner}}.ann.log"
     shell:
         """
@@ -153,7 +153,7 @@ rule vcf_interactive_query:
         v_type = lambda w: f"-i 'TYPE=\"{str(config.get('VTYPE', '')).split('=')[-1]}\"'" if config.get('VTYPE') else "",
 
         fmt = config.get("FMT", "%CHROM,%POS,%REF,%ALT,[%GT],%INFO/ANN\\n")
-    conda: "../env/vcf.yaml"
+    conda: "../env/dna_vcf.yaml"
     shell:
         """
         mkdir -p reads/{PRJNAME}/vcf/query
@@ -179,7 +179,7 @@ rule vcf_filter_by_query:
         include = lambda w: f"-i '{str(config.get('INCLUDE', '')).split('=')[-1]}'" if config.get('INCLUDE') else "",
         # bcftools view uses -v indels directly
         v_type = lambda w: f"-v {str(config.get('VTYPE', '')).split('=')[-1]}" if config.get('VTYPE') else ""
-    conda: "../env/vcf.yaml"
+    conda: "../env/dna_vcf.yaml"
     shell:
         """
         bcftools view {params.region} {params.include} {params.v_type} -O z -o {output.vcf} {input.vcf}
