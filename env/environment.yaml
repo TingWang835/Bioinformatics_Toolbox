@@ -1,9 +1,0 @@
-name: snakemake
-channels:
-  - conda-forge
-  - bioconda
-dependencies:
-  - python=3.11
-  - snakemake
-  - pandas
-  - pulp < 2.8  # Required for some Snakemake 7/8 versions
