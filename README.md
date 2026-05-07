@@ -33,7 +33,7 @@ Featuring:
    2. Makesure environment.yml is in the working dir.
    3. Move terminal to working dir and run:
    ```bash
-      conda env create -f environment.yml -n new_env_name
+      conda env create -f snakemake_install.yml -n new_env_name
    ```
    4. Run following command in directory terminal (first time only), to permit excution of run.sh and bcfquery.sh.
    ```bash
