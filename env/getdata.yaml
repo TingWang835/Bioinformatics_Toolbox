@@ -6,4 +6,4 @@ dependencies:
   - entrez-direct
   - sra-tools
   - pandas
-
+  - gffread # used in rule gff_to_gtf
