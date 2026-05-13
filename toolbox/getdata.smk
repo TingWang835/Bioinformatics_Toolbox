@@ -106,3 +106,14 @@ rule prepare_reference: # shortcut to run download_refs and samtools_faidx
     input:
         f"refs/{config['REFNAME']}/{config['ACC']}.fa",
         f"refs/{config['REFNAME']}/{config['ACC']}.fa.fai"
+
+rule gff_to_gtf:
+    input:
+        gff = f"refs/{{config['REFNAME']}}/{{config['ACC']}}.gff"
+    output:
+        gtf = f"refs/{{config['REFNAME']}}/{{config['ACC']}}.gtf"
+    conda: "../env/getdata.yaml"
+    log: f"reads/{PRJNAME}/logs/getdata/gff_to_gtf.log"
+    shell:
+        # -T flag ensures the output is in GTF format
+        "gffread {input.gff} -T -o {output.gtf}"
