@@ -24,7 +24,7 @@ N: "10000"
 
 
 # qc.smk specific variabble
-# trim quality below ??
+# trim quality below a certain level
 QUALITY: "20"
 
 # Minimum length to keep
