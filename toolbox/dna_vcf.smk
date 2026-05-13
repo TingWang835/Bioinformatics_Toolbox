@@ -143,8 +143,8 @@ rule vcfannotation:
         
 rule vcf_interactive_query:
     input:
-        vcf = f"reads/{PRJNAME}/vcf/all_samples.{config['ALIGNER']}.ann.vcf.gz",
-        tbi = f"reads/{PRJNAME}/vcf/all_samples.{config['ALIGNER']}.ann.vcf.gz.tbi"
+        vcf = f"reads/{PRJNAME}/vcf/all_samples.{config.get('ALIGNER', 'bwa')}.ann.vcf.gz",
+        tbi = f"reads/{PRJNAME}/vcf/all_samples.{config.get('ALIGNER', 'bwa')}.ann.vcf.gz.tbi"
     output:
         report = f"reads/{PRJNAME}/vcf/query/{{query_id}}.csv"
     params:
@@ -169,8 +169,8 @@ rule vcf_interactive_query:
 
 rule vcf_filter_by_query:
     input:
-        vcf = f"reads/{PRJNAME}/vcf/all_samples.{config['ALIGNER']}.ann.vcf.gz",
-        tbi = f"reads/{PRJNAME}/vcf/all_samples.{config['ALIGNER']}.ann.vcf.gz.tbi"
+        vcf = f"reads/{PRJNAME}/vcf/all_samples.{config.get('ALIGNER', 'bwa')}.ann.vcf.gz",
+        tbi = f"reads/{PRJNAME}/vcf/all_samples.{config.get('ALIGNER', 'bwa')}.ann.vcf.gz.tbi"
     output:
         vcf = f"reads/{PRJNAME}/vcf/query/{{query_id}}.vcf.gz",
         tbi = f"reads/{PRJNAME}/vcf/query/{{query_id}}.vcf.gz.tbi"
