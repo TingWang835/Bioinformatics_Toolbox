@@ -12,14 +12,15 @@ configfile: f"reads/{PRJNAME}/config.yaml"
 # 2. Include Modular Rule Files
 include: "toolbox/getdata.smk" 
 include: "toolbox/qc.smk" 
-include: "toolbox/aligner.smk" 
-include: "toolbox/vcf.smk" 
+include: "toolbox/dna_aligner.smk" 
+include: "toolbox/dna_vcf.smk" 
 include: "toolbox/cleanup.smk"
 include: "toolbox/dna_rigidity.smk"
 # include: "toolbox/rnaseq.smk" 
 
 # 3. Get Functions
-def get_samples(wildcards):
+
+def get_runinfo(wildcards):
     """
     Trigger checkpoints base on dsource from config.yaml (default: SRA)
     local_runinfo.csv will be generated based on fastq file names under read/[project_name]
@@ -40,27 +41,26 @@ def get_qc(wildcards):
     """
     Generates QC report targets, merge by multiqc and forces fastq trimming.
     """
-    samples = get_samples(wildcards)
-    
+    samples = get_runinfo(wildcards)
     
     # Standard FastQC reports
     fastqc = expand("reads/{prj}/qc/{s}_{pair}_fastqc.html", 
                     prj=PRJNAME, s=samples, pair=[1, 2])
-    # Summarise using multiqc
-    multiqc = f"reads/{PRJNAME}/qc/multiqc_report.html"
-    # Trimmed fastq files (Note: Trim Galore naming uses _1_val_1 and _2_val_2)
+    # Summarise using multiqc (the primary target)
+    multiqc = [f"reads/{PRJNAME}/qc/multiqc_report.html"]
+    
+    # Trimmed outputs - Ensure these exactly match rule trim_reads output block
     trim_r1 = expand("reads/{prj}/qc_trimmed/{s}_1_val_1.fq.gz", prj=PRJNAME, s=samples)
     trim_r2 = expand("reads/{prj}/qc_trimmed/{s}_2_val_2.fq.gz", prj=PRJNAME, s=samples)
-    
     # Return a combined list of all targets
-    return [multiqc] + fastqc + trim_r1 + trim_r2
+    return multiqc + trim_r1 + trim_r2
 
 
 def get_bam(wildcards):
     """
     Align, generate bam and filtered bam.
     """
-    samples = get_samples(wildcards)
+    samples = get_runinfo(wildcards)
     aligner = config.get("ALIGNER", "bwa")
     return expand("reads/{prj}/bam/filtered/{s}.{aln}.filtered.bam",
                   prj=PRJNAME, s=samples, aln=aligner)
@@ -70,7 +70,7 @@ def get_vcf(wildcards):
     """
     Generates vcf.gz, merged.vcf.gz, ann.vcf 
     """
-    samples = get_samples(wildcards)
+    samples = get_runinfo(wildcards)
     aligner = config.get("ALIGNER", "bwa") 
     annvcf =  f"reads/{PRJNAME}/vcf/all_samples.{aligner}.ann.vcf.gz"
     anntbi =  f"reads/{PRJNAME}/vcf/all_samples.{aligner}.ann.vcf.gz.tbi"
@@ -78,7 +78,8 @@ def get_vcf(wildcards):
     consensus = expand("reads/{prj}/vcf/consensus/{s}.{aln}.consensus.fa", prj=PRJNAME, s=samples, aln=aligner)
     return [annvcf, anntbi, annstats] + consensus
     
-def get_rigid(wildcards):
+def get_rigid(wildcards): 
+    # named unintentionally, kept for comedic effect
     """
     Generates ACC_rigidity_profile.tsv and ACC_rigidity_profile.bedgraph
     """ 
@@ -86,11 +87,17 @@ def get_rigid(wildcards):
     bg = f"reads/{PRJNAME}/dna_rigidity/{config['ACC']}_rigidity_profile.bedGraph"
     return [tsv, bg]
 
+def get_rna_data(wildcards):
+    return {
+        "fasta": f"refs/{config['REFNAME']}/{config['ACC']}.fa",
+        "gtf": f"refs/{config['REFNAME']}/{config['ACC']}.gtf"
+    }
+
 def get_rnaseq(wildcards):
     """
     placeholder.
     """
-    samples = get_samples(wildcards)
+    samples = get_runinfo(wildcards)
     return expand("reads/{prj}/counts/{s}.counts.txt", 
                   prj=PRJNAME, s=samples)
 
@@ -103,6 +110,7 @@ rule note:
         print("\n" + "="*50)
         print("THIS SNAKEFILE SERVICE AS TERMINAL FOR BIOINFOMATIC TOOLBOX")
         print("Please specify a target rule:")
+        print("  snakemake runinfo - Run get runinfo for samples")
         print("  snakemake qc      - Run FastQC")
         print("  snakemake bam     - Run Alignments")
         print("  snakemake vcf     - Run VCF")
@@ -111,6 +119,12 @@ rule note:
         print("  snakemake rnaseq  - Run RNA-seq analysis (place holder)")
         print("  snakemake cleanup  - clean up dummy R2 files from single end sequencing")
         print("="*50 + "\n")
+
+rule runinfo:
+    """
+    Download runinfo.csv or create one from fastq files under reads/project_name
+    """
+    input: get_runinfo
 
 rule qc:
     """
