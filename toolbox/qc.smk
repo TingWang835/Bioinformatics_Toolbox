@@ -29,7 +29,7 @@ rule multiqc:
     input:
         # Forces the rule to wait until all individual FastQC reports exist
         lambda wildcards: expand("reads/{prj}/qc/{s}_{pair}_fastqc.html", 
-                                 prj=PRJNAME, s=get_samples(wildcards), pair=[1, 2])
+                                 prj=PRJNAME, s=get_runinfo(wildcards), pair=[1, 2])
     output:
         f"reads/{PRJNAME}/qc/multiqc_report.html"
     params:
@@ -40,32 +40,37 @@ rule multiqc:
         "multiqc {params.qc_dir} -o {params.qc_dir} -n multiqc_report.html --force"
 
 rule trim_reads:
-    """
-    Handles quality trimming (tail cutting) at Phred 30.
-    """
     input:
         r1 = f"reads/{PRJNAME}/{{sample}}_1.fastq",
         r2 = f"reads/{PRJNAME}/{{sample}}_2.fastq"
     output:
-        # Trim Galore naming convention for paired: _val_1 and _val_2
         r1_p = f"reads/{PRJNAME}/qc_trimmed/{{sample}}_1_val_1.fq.gz",
         r2_p = f"reads/{PRJNAME}/qc_trimmed/{{sample}}_2_val_2.fq.gz"
+    params:
+        quality = config.get("QUALITY", "20"),
+        length = config.get("LENGTH", "20")
     log: f"reads/{PRJNAME}/logs/qc/trim_reads/{{sample}}.log"
     conda: "../env/qc.yaml"
     shell:
         """
         if [ -s "{input.r2}" ]; then
             # Real paired-end data
-            trim_galore --paired --gzip -q 30 --output_dir reads/{PRJNAME}/qc_trimmed/ {input.r1} {input.r2} > {log} 2>&1
+            trim_galore --paired --gzip -q {params:quality} --length {params:length} --output_dir reads/{PRJNAME}/qc_trimmed/ {input.r1} {input.r2} > {log} 2>&1
         else
-            # Single-end data: Trim Galore creates a different filename for SE
-            trim_galore --gzip -q 30 --output_dir reads/{PRJNAME}/qc_trimmed/ {input.r1} > {log} 2>&1
+            # Single-end data
+            trim_galore --gzip -q {params:quality} --length {params:length} --output_dir reads/{PRJNAME}/qc_trimmed/ {input.r1} > {log} 2>&1
             
-            # 1. Rename the SE output to match expected file name
-            mv reads/{PRJNAME}/qc_trimmed/{wildcards.sample}_1_trimmed.fq.gz {output.r1_p}
+            # 1. Rename SE output. 
+            # Trim Galore SE output for sample_1.fastq is sample_1_trimmed.fq.gz
+            if [ -f "reads/{PRJNAME}/qc_trimmed/{wildcards.sample}_1_trimmed.fq.gz" ]; then
+                mv reads/{PRJNAME}/qc_trimmed/{wildcards.sample}_1_trimmed.fq.gz {output.r1_p}
+            elif [ -f "reads/{PRJNAME}/qc_trimmed/{wildcards.sample}_1_trimmed.fq" ]; then
+                gzip -c reads/{PRJNAME}/qc_trimmed/{wildcards.sample}_1_trimmed.fq > {output.r1_p}
+                rm reads/{PRJNAME}/qc_trimmed/{wildcards.sample}_1_trimmed.fq
+            fi
             
-            # 2. Create a dummy gzipped file for R2 so downstream rules don't crash
-            echo "" | gzip > {output.r2_p}
-            echo "Single-end mode: Renamed R1 and created dummy R2.gz" >> {log}
+            # 2. Create a dummy gzipped file for R2
+            printf "" | gzip > {output.r2_p}
+            echo "Single-end mode: Processed R1 and created dummy R2.gz" >> {log}
         fi
         """
