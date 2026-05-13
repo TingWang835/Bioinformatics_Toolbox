@@ -23,6 +23,15 @@ N: "10000"
 
 
 
+# qc.smk specific variabble
+# trim quality below ??
+QUALITY: "20"
+
+# Minimum length to keep
+LENGTH: "15"
+
+
+
 ## aligner.smk specific variables
 # choose alinger f(bwa, bowtie2, minimap2_sr (use lower case!!))
 ALIGNER: "bwa"
