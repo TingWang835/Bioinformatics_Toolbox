@@ -1,17 +1,21 @@
-localrules: vcfcall, vcfmerge, vcfnorm, vcfconsensus, download_snpeff_db, vcfannotation
+localrules: vcfcall, vcfmerge, vcfnorm, vcfconsensus, snpeff_build, vcfannotation, vcf_interactive_query, vcf_filter_by_query
+
+# =============================================================================
+# Rules
+# =============================================================================
 
 rule vcfcall:
     input:
-        bam = f"reads/{PRJNAME}/bam/filtered/{{sample}}.{{aligner}}.filtered.bam",
-        ref = f"refs/{config['REFNAME']}/{config['ACC']}.fa",
-        fai = f"refs/{config['REFNAME']}/{config['ACC']}.fa.fai"
+        unpack(get_ref_source),
+        bam = f"{READS_DIR}/bam/filtered/{{sample}}.{{aligner}}.filtered.bam",
+        fai = lambda wildcards: f"{get_ref_source(wildcards)['ref']}.fai"
     output:
-        vcf = temp(f"reads/{PRJNAME}/vcf/raw/{{sample}}.{{aligner}}.vcf.gz"),
-        tbi = temp(f"reads/{PRJNAME}/vcf/raw/{{sample}}.{{aligner}}.vcf.gz.tbi")
+        vcf = temp(f"{READS_DIR}/vcf/raw/{{sample}}.{{aligner}}.vcf.gz"),
+        tbi = temp(f"{READS_DIR}/vcf/raw/{{sample}}.{{aligner}}.vcf.gz.tbi")
     params:
         ploidy = config.get("PLOIDY", 2)
     conda: "../env/dna_vcf.yaml"
-    log: f"reads/{PRJNAME}/logs/vcf/vcfcall/{{sample}}.{{aligner}}.log"
+    log: f"{LOG_DIR}/vcf/vcfcall/{{sample}}.{{aligner}}.log"
     shell:
         """
         freebayes -f {input.ref} --ploidy {params.ploidy} {input.bam} | bcftools view -Oz -o {output.vcf}
@@ -20,25 +24,24 @@ rule vcfcall:
 
 rule vcfmerge:
     input:
-        vcfs = lambda w: expand(f"reads/{PRJNAME}/vcf/raw/{{sample}}.{w.aligner}.vcf.gz", sample=get_samples(w)),
-        tbis = lambda w: expand(f"reads/{PRJNAME}/vcf/raw/{{sample}}.{w.aligner}.vcf.gz.tbi", sample=get_samples(w))
-        #create a list of filepaths e.g. (reads/PRJNAME/vcf/raw/SRR001, reads/PRJNAME/vcf/raw/SRR002)
+        vcfs = lambda w: expand(f"{READS_DIR}/vcf/raw/{{sample}}.{w.aligner}.vcf.gz", sample=get_runinfo(w)),
+        tbis = lambda w: expand(f"{READS_DIR}/vcf/raw/{{sample}}.{w.aligner}.vcf.gz.tbi", sample=get_runinfo(w))
     output:
-        merged_vcf = f"reads/{PRJNAME}/vcf/all_samples.{{aligner}}.merged.vcf.gz"
+        merged_vcf = f"{READS_DIR}/vcf/all_samples.{{aligner}}.merged.vcf.gz"
     conda: "../env/dna_vcf.yaml"
-    log: f"reads/{PRJNAME}/logs/vcf/vcfmerge/all_sample.{{aligner}}.merged.log"
+    log: f"{LOG_DIR}/vcf/vcfmerge/all_sample.{{aligner}}.merged.log"
     shell:
         "bcftools merge {input.vcfs} -Oz -o {output.merged_vcf}"
 
 rule vcfnorm:
     input:
-        vcf = f"reads/{PRJNAME}/vcf/all_samples.{{aligner}}.merged.vcf.gz",
-        ref = f"refs/{config['REFNAME']}/{config['ACC']}.fa"
+        unpack(get_ref_source),
+        vcf = f"{READS_DIR}/vcf/all_samples.{{aligner}}.merged.vcf.gz"
     output:
-        vcf_gz = f"reads/{PRJNAME}/vcf/all_samples.{{aligner}}.merged.norm.vcf.gz",
-        tbi = f"reads/{PRJNAME}/vcf/all_samples.{{aligner}}.merged.norm.vcf.gz.tbi"
+        vcf_gz = f"{READS_DIR}/vcf/all_samples.{{aligner}}.merged.norm.vcf.gz",
+        tbi = f"{READS_DIR}/vcf/all_samples.{{aligner}}.merged.norm.vcf.gz.tbi"
     conda: "../env/dna_vcf.yaml"
-    log: f"reads/{PRJNAME}/logs/vcf/vcfnorm/all_samples.{{aligner}}.merged.norm.log"
+    log: f"{LOG_DIR}/vcf/vcfnorm/all_samples.{{aligner}}.merged.norm.log"
     shell:
         """
         bcftools norm -f {input.ref} -m -any {input.vcf} -Oz -o {output.vcf_gz}
@@ -47,29 +50,19 @@ rule vcfnorm:
 
 rule vcfconsensus:
     input:
-        vcf = f"reads/{PRJNAME}/vcf/all_samples.{{aligner}}.merged.norm.vcf.gz",
-        tbi = f"reads/{PRJNAME}/vcf/all_samples.{{aligner}}.merged.norm.vcf.gz.tbi",
-        ref = f"refs/{config['REFNAME']}/{config['ACC']}.fa"
+        unpack(get_ref_source),
+        vcf = f"{READS_DIR}/vcf/all_samples.{{aligner}}.merged.norm.vcf.gz",
+        tbi = f"{READS_DIR}/vcf/all_samples.{{aligner}}.merged.norm.vcf.gz.tbi"
     output:
-        fasta = f"reads/{PRJNAME}/vcf/consensus/{{sample}}.{{aligner}}.consensus.fa"
+        fasta = f"{READS_DIR}/vcf/consensus/{{sample}}.{{aligner}}.consensus.fa"
     conda: "../env/dna_vcf.yaml"
-    log: f"reads/{PRJNAME}/logs/vcf/vcfconsensus/{{sample}}.{{aligner}}.consensus.log"
+    log: f"{LOG_DIR}/vcf/vcfconsensus/{{sample}}.{{aligner}}.consensus.log"
     shell:
         "bcftools consensus -f {input.ref} -s {wildcards.sample} {input.vcf} > {output.fasta}"
 
-# this rule was placed on hold because building a local db is more desirable 
-# rule download_snpeff_db:
-#     output:
-#         directory(f"databases/snpeff/{config['SNPEFF_DB']}")
-#     params:
-#         db = config.get("SNPEFF_DB", "EBOLA_VIRUS_GENOME"),
-#         ram = config.get("RAM", "4g")
-#     conda: "../env/dna_vcf.yaml"
-#     log: f"reads/{PRJNAME}/logs/vcf/snpeff_download.log"
-#     shell:
-#         """
-#         snpEff -Xmx{params.ram} download -v -dataDir databases/snpeff {params.db} > {log} 2>&1
-#         """
+# =============================================================================
+# Functional Annotation & Queries (Pending Refactoring)
+# =============================================================================
 
 rule snpeff_build:
     input:
@@ -81,7 +74,7 @@ rule snpeff_build:
         genome = config['REFNAME'],
         db_dir = "databases/snpeff"
     conda: "../env/dna_vcf.yaml"
-    log: f"reads/{PRJNAME}/logs/vcf/snpeff_build_{config['REFNAME']}.log"
+    log: f"{LOG_DIR}/vcf/snpeff_build_{config['REFNAME']}.log"
     shell:
         """
         # Step 1: create subdirectory, copy fa and gff3 files
@@ -90,9 +83,6 @@ rule snpeff_build:
         cp {input.gff} {params.db_dir}/{params.genome}/genes.gff
 
         # Step 2: create local snpeff.config
-        # pwd is used to prevent SnpEff from creating "double path"
-        # e.g. SnpEff will create databases/snfeff/refname/databases/snpeff/refname
-        # because it recognize snpeff.config location as the working direct (which is under databases/snfeff/refname)
         ABS_PATH=$(pwd)
         echo "{params.genome}.genome : {params.genome}" > {params.db_dir}/{params.genome}/snpEff.config
 
@@ -113,52 +103,44 @@ rule snpeff_build:
 
 rule vcfannotation:
     input:
-        vcf = f"reads/{PRJNAME}/vcf/all_samples.{{aligner}}.merged.norm.vcf.gz",
-        db = f"databases/snpeff/{config['REFNAME']}/snpEffectPredictor.bin" 
+        vcf = f"{READS_DIR}/vcf/all_samples.{{aligner}}.merged.norm.vcf.gz",
+        db = f"databases/snpeff/{config['REFNAME']}/snpEffectPredictor.bin"
     output:
-        vcf = f"reads/{PRJNAME}/vcf/all_samples.{{aligner}}.ann.vcf.gz",
-        tbi = f"reads/{PRJNAME}/vcf/all_samples.{{aligner}}.ann.vcf.gz.tbi",
-        stats = f"reads/{PRJNAME}/vcf/all_samples.{{aligner}}.snpeff_stats.html"
+        vcf = f"{READS_DIR}/vcf/all_samples.{{aligner}}.ann.vcf.gz",
+        tbi = f"{READS_DIR}/vcf/all_samples.{{aligner}}.ann.vcf.gz.tbi",
+        stats = f"{READS_DIR}/vcf/all_samples.{{aligner}}.snpeff_stats.html"
     params:
         genome = config['REFNAME'],
         ram = config.get("RAM", "4g"),
-        config_path = f"databases/snpeff/{config['REFNAME']}/snpEff.config",
         db_dir = "databases/snpeff"
     conda: "../env/dna_vcf.yaml"
-    log: f"reads/{PRJNAME}/logs/vcf/vcfannotation/all_samples.{{aligner}}.ann.log"
+    log: f"{LOG_DIR}/vcf/vcfannotation/all_samples.{{aligner}}.ann.log"
     shell:
         """
-        # Capture current directory to prevent path doubling
         ABS_PATH=$(pwd)
-        snpEff -Xmx{params.ram} ann \
-            -c $ABS_PATH/{params.config_path} \
+        snpEff -Xmx{params.ram} -v {params.genome} \
+            -c $ABS_PATH/{params.db_dir}/{params.genome}/snpEff.config \
             -dataDir $ABS_PATH/{params.db_dir} \
-            -s {output.stats} \
-            {params.genome} \
-            {input.vcf} | bcftools view -Oz -o {output.vcf}
-        
-        # Index the new file to create the .tbi
+            -s {output.stats} {input.vcf} | bcftools view -Oz -o {output.vcf}
         bcftools index -t {output.vcf}
         """
-        
+
 rule vcf_interactive_query:
     input:
-        vcf = f"reads/{PRJNAME}/vcf/all_samples.{config.get('ALIGNER', 'bwa')}.ann.vcf.gz",
-        tbi = f"reads/{PRJNAME}/vcf/all_samples.{config.get('ALIGNER', 'bwa')}.ann.vcf.gz.tbi"
+        vcf = f"{READS_DIR}/vcf/all_samples.{config.get('ALIGNER', 'bwa')}.ann.vcf.gz",
+        tbi = f"{READS_DIR}/vcf/all_samples.{config.get('ALIGNER', 'bwa')}.ann.vcf.gz.tbi"
     output:
-        report = f"reads/{PRJNAME}/vcf/query/{{query_id}}.csv"
+        report = f"{READS_DIR}/vcf/query/interactive_report.csv"
     params:
-        region = lambda w: f"-r {str(config.get('REGION', '')).split('=')[-1]}" if config.get('REGION') else "",
-        include = lambda w: f"-i '{str(config.get('INCLUDE', '')).split('=')[-1]}'" if config.get('INCLUDE') else "",
-        v_type = lambda w: f"-i 'TYPE=\"{str(config.get('VTYPE', '')).split('=')[-1]}\"'" if config.get('VTYPE') else "",
-
-        fmt = config.get("FMT", "%CHROM,%POS,%REF,%ALT,[%GT],%INFO/ANN\\n")
+        region = lambda w: f"-r {str(config.get('REGION', ''))}" if config.get('REGION') else "",
+        include = lambda w: f"-i '{str(config.get('INCLUDE', ''))}'" if config.get('INCLUDE') else "",
+        v_type = lambda w: f"-V {str(config.get('V_TYPE', ''))}" if config.get('V_TYPE') else "",
+        fmt = "%CHROM,%POS,%REF,%ALT,[%GT],%INFO/ANN\n"
     conda: "../env/dna_vcf.yaml"
     shell:
         """
-        mkdir -p reads/{PRJNAME}/vcf/query
+        mkdir -p {READS_DIR}/vcf/query
         
-        # Header with metadata for future reference
         echo "# Query Date: $(date)" > {output.report}
         echo "# Parameters: {params.region} {params.include} {params.v_type}" >> {output.report}
         echo "CHROM,POS,REF,ALT,GT,ANNOTATION" >> {output.report}
@@ -169,19 +151,17 @@ rule vcf_interactive_query:
 
 rule vcf_filter_by_query:
     input:
-        vcf = f"reads/{PRJNAME}/vcf/all_samples.{config.get('ALIGNER', 'bwa')}.ann.vcf.gz",
-        tbi = f"reads/{PRJNAME}/vcf/all_samples.{config.get('ALIGNER', 'bwa')}.ann.vcf.gz.tbi"
+        vcf = f"{READS_DIR}/vcf/all_samples.{config.get('ALIGNER', 'bwa')}.ann.vcf.gz",
+        tbi = f"{READS_DIR}/vcf/all_samples.{config.get('ALIGNER', 'bwa')}.ann.vcf.gz.tbi"
     output:
-        vcf = f"reads/{PRJNAME}/vcf/query/{{query_id}}.vcf.gz",
-        tbi = f"reads/{PRJNAME}/vcf/query/{{query_id}}.vcf.gz.tbi"
+        vcf = f"{READS_DIR}/vcf/query/{{query_id}}.vcf.gz",
+        tbi = f"{READS_DIR}/vcf/query/{{query_id}}.vcf.gz.tbi"
     params:
         region = lambda w: f"-r {str(config.get('REGION', '')).split('=')[-1]}" if config.get('REGION') else "",
-        include = lambda w: f"-i '{str(config.get('INCLUDE', '')).split('=')[-1]}'" if config.get('INCLUDE') else "",
-        # bcftools view uses -v indels directly
-        v_type = lambda w: f"-v {str(config.get('VTYPE', '')).split('=')[-1]}" if config.get('VTYPE') else ""
+        include = lambda w: f"-i '{str(config.get('INCLUDE', '')).split('=')[-1]}'" if config.get('INCLUDE') else ""
     conda: "../env/dna_vcf.yaml"
     shell:
         """
-        bcftools view {params.region} {params.include} {params.v_type} -O z -o {output.vcf} {input.vcf}
+        bcftools view {params.region} {params.include} {input.vcf} -Oz -o {output.vcf}
         bcftools index -t {output.vcf}
         """

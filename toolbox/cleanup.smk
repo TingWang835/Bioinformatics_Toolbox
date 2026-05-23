@@ -5,25 +5,29 @@ rule final_seal:
     """
     input:
         # Ensures this runs only after the final annotation and any reports are done
-        expand(f"reads/{{prj}}/vcf/all_samples.{{aligner}}.snpeff_stats.html", 
-               prj=PRJNAME, aligner=config.get('ALIGNER', 'bwa'))
+        expand("{rddir}/vcf/all_samples.{aln}.snpeff_stats.html", 
+               rddir=READS_DIR, aln=config.get('ALIGNER', 'bwa').lower())
     output:
-        marker = f"reads/{PRJNAME}/logs/cleanup_complete.done"
+        marker = f"{LOG_DIR}/cleanup_complete.done"
     shell:
         """
         echo "Starting cleanup of dummy files for project: {PRJNAME}"
 
         # 1. Remove 0-byte placeholders from getdata and QC
-        # This covers R2 FASTQs, FastQC reports, and Trim Galore logs
-        find reads/{PRJNAME}/ -name "*_2.fastq" -size 0 -delete
-        find reads/{PRJNAME}/qc/ -name "*_2_fastqc.html" -size 0 -delete
-        find reads/{PRJNAME}/qc/ -name "*_2_fastqc.zip" -size 0 -delete
-        find reads/{PRJNAME}/logs/ -name "*_2_fastq_trimming_report.txt" -size 0 -delete
+        find {READS_DIR}/ -name "*_2.fastq" -size 0 -delete
+        find {READS_DIR}/qc/ -name "*_2_fastqc.html" -size 0 -delete
+        find {READS_DIR}/qc/ -name "*_2_fastqc.zip" -size 0 -delete
+        find {LOG_DIR}/ -name "*_2_fastq_trimming_report.txt" -size 0 -delete
 
-        # 2. Specifically handle the empty Trim Galore gzip dummies(which are ~20 bytes, not 0)
-        # Verify they contain 0 lines before deleting
-        find reads/{PRJNAME}/qc_trimmed/ -name "*_2_val_2.fq.gz" -exec sh -c 'if [ $(zcat {{}} | wc -l) -eq 0 ]; then rm {{}}; fi' \;
+        # 2. Handle empty Trim Galore gzip dummies (~20 bytes, verify 0 lines)
+        find {READS_DIR}/qc_trimmed/ -name "*_2_val_2.fq.gz" -exec sh -c '
+            for file; do
+                if [ $(zcat "$file" | wc -l) -eq 0 ]; then
+                    rm "$file"
+                fi
+            done
+        ' _ {{}} +
 
         touch {output.marker}
-        echo "Cleanup complete. Dummy files removed."
+        echo "Cleanup complete. Dummy files removed safely."
         """
