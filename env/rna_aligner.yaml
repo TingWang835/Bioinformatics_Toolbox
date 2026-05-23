@@ -1,0 +1,14 @@
+# rna_aligner.yaml
+channels:
+  - bioconda
+  - conda-forge
+  - defaults
+dependencies:
+  - star
+  - hisat2
+  - samtools
+  - gffread
+  - kallisto
+  - salmon
+  - deeptools
+  - subread  # Required for featureCounts
