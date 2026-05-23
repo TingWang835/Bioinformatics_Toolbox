@@ -5,3 +5,4 @@ refs/
 note.txt
 databases/
 sandbox_envs/
+toolbox/geo_extraction.smk
