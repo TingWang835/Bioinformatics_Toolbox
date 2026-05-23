@@ -1,8 +1,15 @@
-# Accession number 
-ACC: "AF086833"
+# ~~~~~ VCF Template~~~~~
+
+# =============================================================================
+# General Variables
+# =============================================================================
 
 # Reference name
 REFNAME: "ebola_1976"
+
+# Source to download references (ncbi or ensembl)
+REF_SOURCE: "ncbi"
+
 
 #PRJN number (only used in getdata_sra)
 PRJNUMBER: "PRJNA257197"
@@ -11,8 +18,24 @@ PRJNUMBER: "PRJNA257197"
 PRJNAME: "ebola_2014"
 
 
+# =============================================================================
+# Ref variables (source dependent)
+# =============================================================================
+# (optional) NCBI source variable
+# Accession number 
+ACC: "AF086833"
 
-## getdata.smk specific variables
+# (optional) Ensemble source variables
+# Latin name of the species (case insensitive)
+SPECIES_LATIN: "saccharomyces_cerevisiae" 
+#Assembly number
+ASSEMBLY: "R64-1-1"
+# Release version
+RELEASE: 112
+
+# =============================================================================
+# getdata.smk specific variables
+# =============================================================================
 # choose Data source for LOCAL or SRA 
 #LOCAL: create a runinfo.csv from items under reads/{PRJNAME}
 #SRA: if runinfo.csv exist: download SRRs from runinfo.csv, else query for runinfo.csv from SRA metadata
@@ -22,17 +45,19 @@ DSOURCE: "SRA"
 N: "10000"
 
 
-
+# =============================================================================
 # qc.smk specific variabble
+# =============================================================================
 # trim quality below a certain level
-QUALITY: "20"
+QUALITY: "30"
 
 # Minimum length to keep
 LENGTH: "15"
 
 
-
-## aligner.smk specific variables
+# =============================================================================
+# dna_aligner.smk specific variabble
+# =============================================================================
 # choose alinger f(bwa, bowtie2, minimap2_sr (use lower case!!))
 ALIGNER: "bwa"
 
@@ -44,7 +69,9 @@ MAPQ: "30"
 
 
 
-#vcf.smk specific variables
+# =============================================================================
+# dna_vcf.smk specific variabble
+# =============================================================================
 # freebayes specific variable 
 # viral/haploid: 1 ,   human/diploid: 2
 PLOIDY: "1"
