@@ -127,8 +127,8 @@ rule vcfannotation:
 
 rule vcf_interactive_query:
     input:
-        vcf = f"{READS_DIR}/vcf/all_samples.{config.get('ALIGNER', 'bwa')}.ann.vcf.gz",
-        tbi = f"{READS_DIR}/vcf/all_samples.{config.get('ALIGNER', 'bwa')}.ann.vcf.gz.tbi"
+        vcf = f"{READS_DIR}/vcf/all_samples.{dna_aligner}.ann.vcf.gz",
+        tbi = f"{READS_DIR}/vcf/all_samples.{dna_aligner}.ann.vcf.gz.tbi"
     output:
         report = f"{READS_DIR}/vcf/query/interactive_report.csv"
     params:
@@ -151,8 +151,8 @@ rule vcf_interactive_query:
 
 rule vcf_filter_by_query:
     input:
-        vcf = f"{READS_DIR}/vcf/all_samples.{config.get('ALIGNER', 'bwa')}.ann.vcf.gz",
-        tbi = f"{READS_DIR}/vcf/all_samples.{config.get('ALIGNER', 'bwa')}.ann.vcf.gz.tbi"
+        vcf = f"{READS_DIR}/vcf/all_samples.{dna_aligner}.ann.vcf.gz",
+        tbi = f"{READS_DIR}/vcf/all_samples.{dna_aligner}.ann.vcf.gz.tbi"
     output:
         vcf = f"{READS_DIR}/vcf/query/{{query_id}}.vcf.gz",
         tbi = f"{READS_DIR}/vcf/query/{{query_id}}.vcf.gz.tbi"

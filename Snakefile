@@ -136,14 +136,14 @@ def get_qc(wildcards):
 def get_dna_align(wildcards):
     """Align, generate bam and filtered bam."""
     samples = get_runinfo(wildcards)
-    aligner = config.get("DNA_ALIGNER", "bwa").lower()
+    aligner = dna_aligner
     return expand("{rddir}/bam/filtered/{s}.{aln}.filtered.bam",
                   rddir=READS_DIR, s=samples, aln=aligner)
 
 def get_dna_vcf(wildcards):
     """Generates vcf.gz, merged.vcf.gz, ann.vcf."""
     samples = get_runinfo(wildcards)
-    aligner = config.get("DNA_ALIGNER", "bwa").lower() 
+    aligner = dna_aligner 
     
     annvcf = f"{READS_DIR}/vcf/all_samples.{aligner}.ann.vcf.gz"
     anntbi = f"{READS_DIR}/vcf/all_samples.{aligner}.ann.vcf.gz.tbi"
@@ -169,7 +169,7 @@ def get_dna_rigid(wildcards):
 def get_rna_align(wildcards):
     """Determines exactly which files to build based on the RNA ALIGNER in config."""
     samples = get_runinfo(wildcards)
-    aligner = config.get("RNA_ALIGNER", "star").lower()
+    aligner = rna_aligner
     
     if aligner in RNA_PSEUDO_ALIGNERS:
         return expand("{rddir}/counts/{s}.{aln}",
@@ -181,7 +181,7 @@ def get_rna_align(wildcards):
 def get_rna_bigwig(wildcards):
     """Generates BigWig coverage targets for all samples processed with a spliced aligner."""
     samples = get_runinfo(wildcards)
-    aligner = config.get("RNA_ALIGNER", "star").lower()
+    aligner = rna_aligner
     
     if aligner in RNA_SPLICED_ALIGNERS:
         return expand("{rddir}/bam/bigwig/{s}.{aln}.bw",
@@ -190,7 +190,7 @@ def get_rna_bigwig(wildcards):
 
 def get_rna_counts(wildcards):
     """Compiles the single final merged CSV target path for both alignment styles."""
-    aligner = config.get("RNA_ALIGNER", "star").lower()
+    aligner = rna_aligner
     
     if aligner in RNA_SPLICED_ALIGNERS:
         return [f"{READS_DIR}/counts/all_samples.{aligner}_counts.csv"]
@@ -286,9 +286,9 @@ rule dna_vcf:
 rule dna_vcf_all:
     """A shortcut to run a full course with qc, aligner and vcf."""
     input:  
-        lambda wildcards: get_qc(wildcards),
-        lambda wildcards: get_dna_align(wildcards),
-        lambda wildcards: get_dna_vcf(wildcards)
+        get_qc,
+        get_dna_align,
+        get_dna_vcf
 
 # =============================================================================
 # DNA Ridigity Scoring
@@ -303,9 +303,9 @@ rule dna_rigid:
 rule rna_align:
     """Align RNAseq reads using spliced aligner/ pseudo aligner and generate visualization tracks."""
     input:
-        alignments = lambda wildcards: get_rna_align(wildcards),
-        bigwigs    = lambda wildcards: get_rna_bigwig(wildcards),
-        counts     = lambda wildcards: get_rna_counts(wildcards)
+        alignments = get_rna_align,
+        bigwigs    = get_rna_bigwig,
+        counts     = get_rna_counts
         
 rule rna_exp:
     """Perform expression analysis using DESeq2 or edgeR."""
@@ -324,12 +324,25 @@ rule rna_report:
     input:
         get_rna_report_outputs
 
+
 rule rna_enrich:
     """
     Generate Heatmap and perform functional enrichment study.
     """
     input:
         get_rna_enrich_outputs
+
+rule rna_all:
+    """A shortcut to run a full course of RNAseq with qc, aligner, exp, report and enrich."""
+    input:  
+        get_rna_align,
+        get_rna_bigwig,
+        get_rna_counts,
+        get_rna_exp_analyser_output,
+        get_rna_report_outputs,
+        get_rna_enrich_outputs
+
+
 
 
 # =============================================================================

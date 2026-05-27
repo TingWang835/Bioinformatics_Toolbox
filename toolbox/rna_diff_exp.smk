@@ -1,14 +1,13 @@
-
+localrules: tools_compare, rna_log_fold_threshold, diagnostic_plots, pca_plot, heatmap, functional_enrichment
 # =============================================================================
 # Helper Functions
 # =============================================================================
 def get_expression_input(wildcards):
     """Selects the correct combined count matrix based on aligner classification."""
-    aligner = config.get("ALIGNER", "star").lower()
-    if aligner in RNA_SPLICED_ALIGNERS:
-        return f"{READS_DIR}/counts/all_samples.{aligner}_counts.csv"
+    if rna_aligner in RNA_SPLICED_ALIGNERS:
+        return f"{READS_DIR}/counts/all_samples.{rna_aligner}_counts.csv"
     else:
-        return f"{READS_DIR}/counts/all_samples.{aligner}_pseudo_counts.csv"
+        return f"{READS_DIR}/counts/all_samples.{rna_aligner}_pseudo_counts.csv"
 
 # =============================================================================
 # Rules
@@ -27,7 +26,6 @@ rule DESeq2:
         if rna_aligner in RNA_SPLICED_ALIGNERS else 
         f"{READS_DIR}/expression/deseq2_expression.{rna_aligner}_pseudo_counts.csv"
         )
-
     log:
         f"{LOG_DIR}/diff_exp/deseq2/exp_result.{rna_aligner}.log"
     conda:
@@ -46,7 +44,7 @@ rule edgeR:
     """
     input:
         counts = get_expression_input,
-        runinfo = lambda w: f"{READS_DIR}/{config.get('DATASOURCE', 'SRA').lower()}_runinfo.csv"
+        runinfo = f"{READS_DIR}/{data_src.lower()}_runinfo.csv"
     output:
         csv = ( 
         f"{READS_DIR}/expression/edger_expression.{rna_aligner}_counts.csv" 
@@ -54,7 +52,7 @@ rule edgeR:
         f"{READS_DIR}/expression/edger_expression.{rna_aligner}_pseudo_counts.csv"
         )
     log:
-        f"{LOG_DIR}/diff_exp/edgeR/exp_result.{config.get('ALIGNER', 'star').lower()}.log"
+        f"{LOG_DIR}/diff_exp/edgeR/exp_result.{rna_aligner}.log"
     conda:
         "../env/rna_diff_exp.yaml"
     threads: 4
@@ -63,6 +61,7 @@ rule edgeR:
         aligner_type = "spliced" if rna_aligner in RNA_SPLICED_ALIGNERS else "pseudo"
     script:
         "scripts/rna_edgeR_analysis.R"
+
 
 rule tools_compare:
     """
@@ -86,11 +85,10 @@ rule tools_compare:
         "scripts/rna_tools_compare.R"
 
 
-
 rule rna_log_fold_threshold:
     """Filters differential results from the configuration-designated active analyzer."""
     input:
-        csv = lambda w: f"{READS_DIR}/expression/{rna_exp_analyser}_expression.{rna_aligner}_counts.csv" if rna_aligner in RNA_SPLICED_ALIGNERS else f"{READS_DIR}/expression/{rna_exp_analyser}_expression.{rna_aligner}_pseudo_counts.csv"
+        csv = f"{READS_DIR}/expression/{rna_exp_analyser}_expression.{rna_aligner}_counts.csv" if rna_aligner in RNA_SPLICED_ALIGNERS else f"{READS_DIR}/expression/{rna_exp_analyser}_expression.{rna_aligner}_pseudo_counts.csv"
     output:
         sig_csv = f"{READS_DIR}/expression/significant_genes_thresholded.csv",
         volcano = f"{READS_DIR}/expression/plots/volcano_plot.png"
@@ -110,7 +108,7 @@ rule rna_log_fold_threshold:
 rule diagnostic_plots:
     """Generates statistical model diagnostics: MA plots and P-value distribution histograms."""
     input:
-        csv = lambda w: f"{READS_DIR}/expression/{rna_exp_analyser}_expression.{rna_aligner}_counts.csv" if rna_aligner in RNA_SPLICED_ALIGNERS else f"{READS_DIR}/expression/{rna_exp_analyser}_expression.{rna_aligner}_pseudo_counts.csv"
+        csv = f"{READS_DIR}/expression/{rna_exp_analyser}_expression.{rna_aligner}_counts.csv" if rna_aligner in RNA_SPLICED_ALIGNERS else f"{READS_DIR}/expression/{rna_exp_analyser}_expression.{rna_aligner}_pseudo_counts.csv"
     output:
         ma = f"{READS_DIR}/expression/plots/diagnostic_ma_plot.png",
         hist = f"{READS_DIR}/expression/plots/diagnostic_pvalue_histogram.png"
@@ -176,7 +174,7 @@ rule functional_enrichment:
     conda:
         "../env/rna_diff_exp.yaml"
     params:
-        species_latin = species.lower().replace("_", "").replace(".", "").replace(" ", ""),
+        species_latin = species,
         bg_color = config.get("BG_COLOR", "transparent").lower()
     script:
         "scripts/rna_functional_enrichment.R"

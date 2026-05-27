@@ -3,10 +3,15 @@ rule final_seal:
     Deletes all dummy files created for single-end data processing.
     Run this only when the analysis is complete and you have your VCFs.
     """
-    input:
         # Ensures this runs only after the final annotation and any reports are done
-        expand("{rddir}/vcf/all_samples.{aln}.snpeff_stats.html", 
-               rddir=READS_DIR, aln=config.get('ALIGNER', 'bwa').lower())
+    input:
+    lambda wildcards: (
+        f"{READS_DIR}/expression/plots/enrichment_go_dotplot.png"
+        if "toolbox/rna_diff_exp.smk" in workflow.included_stack
+        else f"{READS_DIR}/vcf/all_samples.{dna_aligner}.snpeff_stats.html"
+        if "toolbox/dna_vcf.smk" in workflow.included_stack 
+        else []
+    )
     output:
         marker = f"{LOG_DIR}/cleanup_complete.done"
     shell:
