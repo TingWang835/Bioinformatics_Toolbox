@@ -196,7 +196,7 @@ rule rna_featurecount:
     output:
         txt = f"{READS_DIR}/counts/sequence_individual/{{sample}}.{{aligner}}.txt"
     log:
-        f"{LOG_DIR}/vcf/featurecounts/{{sample}}.{{aligner}}.log"
+        f"{LOG_DIR}/aligner/featurecounts/{{sample}}.{{aligner}}.log"
     conda:
         "../env/rna_aligner.yaml"
     threads: 2
@@ -225,7 +225,7 @@ rule merge_featurecounts:
     output:
         csv = f"{READS_DIR}/counts/all_samples.{{aligner}}_counts.csv"
     log:
-        f"{LOG_DIR}/vcf/featurecounts/merge_all_samples.{{aligner}}.log"
+        f"{LOG_DIR}/aligner/featurecounts/merge_all_samples.{{aligner}}.log"
     run:
         import pandas as pd
 
@@ -260,7 +260,7 @@ rule merge_pseudo:
     output:
         csv = f"{READS_DIR}/counts/all_samples.{{aligner}}_pseudo_counts.csv"
     log:
-        f"{LOG_DIR}/vcf/featurecounts/merge_all_samples.{{aligner}}_pseudo.log"
+        f"{LOG_DIR}/aligner/featurecounts/merge_all_samples.{{aligner}}_pseudo.log"
     run:
         import pandas as pd
 

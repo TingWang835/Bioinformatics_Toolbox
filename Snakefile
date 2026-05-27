@@ -32,12 +32,17 @@ for var, description in mandatory_vars.items():
 # =============================================================================
 # Path Roots
 ref_src = config.get("REF_SOURCE", "ncbi").lower()
+data_src = config.get("DATA_SOURCE", "SRA")
 base_src = config.get("DATABASE_SOURCE", "snpeff").lower()
 
 REFS_DIR = f"refs/{config['REFNAME']}/{ref_src}"
 READS_DIR = f"reads/{PRJNAME}"
 LOG_DIR = f"reads/{PRJNAME}/logs"
 DATABASES_DIR = f"database/{base_src}/{config['REFNAME']}"
+
+# aligner variables for path construction
+dna_aligner = config.get("DNA_ALIGNER", "bwa").lower()
+rna_aligner = config.get("RNA_ALIGNER", "star").lower()
 
 # Tool Wildcard Constraint Configurations
 DNA_ALIGNERS = ["bwa", "bowtie2", "minimap2_sr"]
@@ -53,6 +58,11 @@ release     = config.get("RELEASE", 112)
 # NCBI specific variables
 acc = config.get("ACC", "GCF_000146045.2")
 
+
+# RNAseq expression analyser
+rna_exp_analyser = config.get("EXP_ANALYSER", "deseq2").lower()
+
+
 # =============================================================================
 # Include Modular Rule Files
 # =============================================================================
@@ -63,6 +73,7 @@ include: "toolbox/dna_vcf.smk"
 include: "toolbox/cleanup.smk"
 include: "toolbox/dna_rigidity.smk"
 include: "toolbox/rna_aligner.smk"
+include: "toolbox/rna_diff_exp.smk"
 
 # =============================================================================
 # Helper Functions
@@ -118,17 +129,21 @@ def get_qc(wildcards):
   
     return multiqc + trim_r1 + trim_r2
 
+# =============================================================================
+# DNA and VCF Helper Functions
+# =============================================================================
+
 def get_dna_align(wildcards):
     """Align, generate bam and filtered bam."""
     samples = get_runinfo(wildcards)
-    aligner = config.get("ALIGNER", "bwa").lower()
+    aligner = config.get("DNA_ALIGNER", "bwa").lower()
     return expand("{rddir}/bam/filtered/{s}.{aln}.filtered.bam",
                   rddir=READS_DIR, s=samples, aln=aligner)
 
 def get_dna_vcf(wildcards):
     """Generates vcf.gz, merged.vcf.gz, ann.vcf."""
     samples = get_runinfo(wildcards)
-    aligner = config.get("ALIGNER", "bwa").lower() 
+    aligner = config.get("DNA_ALIGNER", "bwa").lower() 
     
     annvcf = f"{READS_DIR}/vcf/all_samples.{aligner}.ann.vcf.gz"
     anntbi = f"{READS_DIR}/vcf/all_samples.{aligner}.ann.vcf.gz.tbi"
@@ -137,7 +152,10 @@ def get_dna_vcf(wildcards):
                        rddir=READS_DIR, s=samples, aln=aligner)
   
     return [annvcf, anntbi, annstats] + consensus
-    
+
+# =============================================================================
+# DNA Ridigity Helper Functions
+# =============================================================================
 def get_dna_rigid(wildcards): 
     """Generates rigidity profile tracks out of structural data layouts."""
     acc = config.get("ACC", "GCF_000146045.2")
@@ -145,10 +163,13 @@ def get_dna_rigid(wildcards):
     bg = f"{READS_DIR}/dna_rigidity/{acc}_rigidity_profile.bedGraph"
     return [tsv, bg]
 
+# =============================================================================
+# RNAseq Helper Functions
+# =============================================================================
 def get_rna_align(wildcards):
     """Determines exactly which files to build based on the RNA ALIGNER in config."""
     samples = get_runinfo(wildcards)
-    aligner = config.get("ALIGNER", "star").lower()
+    aligner = config.get("RNA_ALIGNER", "star").lower()
     
     if aligner in RNA_PSEUDO_ALIGNERS:
         return expand("{rddir}/counts/{s}.{aln}",
@@ -160,7 +181,7 @@ def get_rna_align(wildcards):
 def get_rna_bigwig(wildcards):
     """Generates BigWig coverage targets for all samples processed with a spliced aligner."""
     samples = get_runinfo(wildcards)
-    aligner = config.get("ALIGNER", "star").lower()
+    aligner = config.get("RNA_ALIGNER", "star").lower()
     
     if aligner in RNA_SPLICED_ALIGNERS:
         return expand("{rddir}/bam/bigwig/{s}.{aln}.bw",
@@ -169,13 +190,44 @@ def get_rna_bigwig(wildcards):
 
 def get_rna_counts(wildcards):
     """Compiles the single final merged CSV target path for both alignment styles."""
-    aligner = config.get("ALIGNER", "star").lower()
+    aligner = config.get("RNA_ALIGNER", "star").lower()
     
     if aligner in RNA_SPLICED_ALIGNERS:
         return [f"{READS_DIR}/counts/all_samples.{aligner}_counts.csv"]
     else:
         # Automatically routes to your new merge_pseudo matrix for Kallisto/Salmon
         return [f"{READS_DIR}/counts/all_samples.{aligner}_pseudo_counts.csv"]
+
+def get_rna_exp_analyser_output(wildcards):
+    """Determines the RNA expression target path based on EXPRESSION_ANALYSER in config."""
+    suffix = "counts.csv" if rna_aligner in RNA_SPLICED_ALIGNERS else "pseudo_counts.csv"
+    return f"{READS_DIR}/expression/{rna_exp_analyser}_expression.{rna_aligner}_{suffix}"
+
+def get_rna_tools_compare(wildcards):
+    """Determines the comprehensive final target path array for the RNA-seq module."""
+    return [
+        f"{READS_DIR}/expression/cross_tool_comparison.csv",
+        f"{READS_DIR}/expression/plots/diff_exp_venn_overlap.png"
+    ]
+
+def get_rna_report_outputs(wildcards):
+    """Gathers all biological thresholds and quality control diagnostic plots."""
+    return [
+        f"{READS_DIR}/expression/significant_genes_thresholded.csv",
+        f"{READS_DIR}/expression/plots/volcano_plot.png",
+        f"{READS_DIR}/expression/plots/diagnostic_ma_plot.png",
+        f"{READS_DIR}/expression/plots/diagnostic_pvalue_histogram.png",
+        f"{READS_DIR}/expression/plots/pca_plot.png"
+    ]
+
+def get_rna_enrich_outputs(wildcards):
+    """Generate heatmap and function enrichment study results."""
+    return [
+        f"{READS_DIR}/expression/plots/heatmap.png",
+        f"{READS_DIR}/expression/enrichment_go_results.csv",
+        f"{READS_DIR}/expression/plots/enrichment_go_dotplot.png",
+    ]
+
 
 # =============================================================================
 # Terminal Rules
@@ -186,15 +238,26 @@ rule note:
         print("\n" + "="*50)
         print("THIS SNAKEFILE SERVES AS TERMINAL FOR BIOINFORMATIC TOOLBOX")
         print("Please specify a target rule:")
-        print("  snakemake runinfo       - Get runinfo for samples")
-        print("  snakemake download_refs - Download fa, gff and gtf files")
-        print("  snakemake qc            - Run FastQC")
-        print("  snakemake dna_align     - Run DNA alignments")
-        print("  snakemake dna_vcf       - Run DNA VCF")
-        print("  snakemake dna_vcf_all   - Run FastQC, DNA Alignments and VCF")
-        print("  snakemake dna_rigid     - Run dna rigidity score on fasta")
-        print("  snakemake rna_align     - Run RNA alignment")
-        print("  snakemake cleanup       - Clean up dummy R2 files from single end sequencing")
+        print("Data/Reference Gathering")
+        print("  snakemake runinfo           - Get runinfo for samples")
+        print("  snakemake download_refs     - Download fa, gff and gtf files")
+        print("  snakemake qc                - Download data and run QC")
+        print("SNP/Variant Analysis")
+        print("  snakemake dna_align         - Run DNA alignments")
+        print("  snakemake dna_vcf           - Run DNA VCF")
+        print("  snakemake dna_vcf_all       - Run QC, DNA Alignments and VCF")
+        print("DNA Rigidity Scoring")
+        print("  snakemake dna_rigid         - Run dna rigidity score on fasta")
+        print("RNAseq Analysis")
+        print("  snakemake rna_align         - Run RNA alignment")
+        print("  snakemake rna_exp           - Run RNA expression analysis")
+        print("  snakemake exp_tools_compare - (optional) Compare expression analysis tools deseq2 vs edger")
+        print("  snakemake rna_report        - Evaluate expression data with pca, MA, p-value histagram and volcano plots,")
+        print("                                generate csv for list of significantly different expressed genes")
+        print("  snakemake rna_enrich        - Generate heatmap and perform functional enrichment study")
+        print("  snakemake rna_all           - Gets samples and refs, run QC, rna align, exp, report and enrich")
+        print("Clean up")
+        print("  snakemake cleanup           - Clean up dummy R2 files from single end sequencing")
         print("="*50 + "\n")
 
 rule runinfo:
@@ -209,6 +272,9 @@ rule qc:
     """QC for fastq files."""
     input: get_qc
 
+# =============================================================================
+# DNA alignment and VCF
+# =============================================================================
 rule dna_align:
     """Align fastq files with index by chosen aligner in config.yaml"""
     input: get_dna_align
@@ -224,10 +290,16 @@ rule dna_vcf_all:
         lambda wildcards: get_dna_align(wildcards),
         lambda wildcards: get_dna_vcf(wildcards)
 
+# =============================================================================
+# DNA Ridigity Scoring
+# =============================================================================
 rule dna_rigid: 
     """Run dna rigidity score on fasta."""
     input: get_dna_rigid
 
+# =============================================================================
+# RNA Alignment and Expression Analysis
+# =============================================================================
 rule rna_align:
     """Align RNAseq reads using spliced aligner/ pseudo aligner and generate visualization tracks."""
     input:
@@ -235,6 +307,34 @@ rule rna_align:
         bigwigs    = lambda wildcards: get_rna_bigwig(wildcards),
         counts     = lambda wildcards: get_rna_counts(wildcards)
         
+rule rna_exp:
+    """Perform expression analysis using DESeq2 or edgeR."""
+    input:
+        get_rna_exp_analyser_output
+
+rule exp_tools_compare:
+    """Compare statistics between DESeq2 and edgeR outputs."""
+    input:
+        get_rna_tools_compare
+
+rule rna_report:
+    """
+    Executes biological threshold filtering,model diagnostics, and global PCA variance plotting.
+    """
+    input:
+        get_rna_report_outputs
+
+rule rna_enrich:
+    """
+    Generate Heatmap and perform functional enrichment study.
+    """
+    input:
+        get_rna_enrich_outputs
+
+
+# =============================================================================
+# Clean up
+# =============================================================================
 rule cleanup:
     """Cleaning up all dummy R2 files created from single end sequencing."""
     input: f"{READS_DIR}/logs/cleanup_complete.done"

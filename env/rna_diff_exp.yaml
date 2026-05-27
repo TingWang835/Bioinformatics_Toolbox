@@ -1,0 +1,20 @@
+name: rna_diff_exp
+channels:
+  - conda-forge
+  - bioconda
+  - defaults
+dependencies:
+  - r-base=4.3
+  - r-languageserver        # Enhanced IDE language features
+  - r-essentials
+  - r-ggplot2               # Volcano, PCA, and diagnostic mapping
+  - r-pheatmap              # Hierarchical clustering heatmaps
+  - r-gridextra             # Composite diagnostic plot arrangements
+  - r-dplyr
+  - bioconductor-deseq2
+  - bioconductor-edger
+  - bioconductor-vsn        # Variance stabilizing check visualizations
+  - bioconductor-tximport   # Transcript-level quantification parsers
+  - bioconductor-clusterprofiler # Core functional enrichment tool
+  - bioconductor-org.sc.sgd.db  # Saccharomyces cerevisiae genome annotation database
+  - bioconductor-org.hs.eg.db   # Human genome annotation fallback library
