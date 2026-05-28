@@ -60,21 +60,26 @@ rule trim_reads:
         if [ -s "{input.r2}" ]; then
             # Real paired-end data
             trim_galore --paired --gzip -q {params.quality} --length {params.length} --output_dir {READS_DIR}/qc_trimmed/ {input.r1} {input.r2} > {log} 2>&1
+            
+            # Manual fallback check for paired-end if Trim Galore skipped compression
+            if [ -f "{READS_DIR}/qc_trimmed/{wildcards.sample}_1_val_1.fq" ]; then
+                echo "Trim Galore skipped compression. Manually compressing files..." >> {log}
+                gzip -f "{READS_DIR}/qc_trimmed/{wildcards.sample}_1_val_1.fq"
+                gzip -f "{READS_DIR}/qc_trimmed/{wildcards.sample}_2_val_2.fq"
+            fi
         else
             # Single-end data
             trim_galore --gzip -q {params.quality} --length {params.length} --output_dir {READS_DIR}/qc_trimmed/ {input.r1} > {log} 2>&1
             
-            # 1. Rename SE output.
-            # Trim Galore SE output for sample_1.fastq is sample_1_trimmed.fq.gz
+            # Handle SE output conversion
             if [ -f "{READS_DIR}/qc_trimmed/{wildcards.sample}_1_trimmed.fq.gz" ]; then
                 mv {READS_DIR}/qc_trimmed/{wildcards.sample}_1_trimmed.fq.gz {output.r1_p}
             elif [ -f "{READS_DIR}/qc_trimmed/{wildcards.sample}_1_trimmed.fq" ]; then
-                gzip -c {READS_DIR}/qc_trimmed/{wildcards.sample}_1_trimmed.fq > {output.r1_p}
-                rm {READS_DIR}/qc_trimmed/{wildcards.sample}_1_trimmed.fq
+                gzip -c "{READS_DIR}/qc_trimmed/{wildcards.sample}_1_trimmed.fq" > {output.r1_p}
+                rm "{READS_DIR}/qc_trimmed/{wildcards.sample}_1_trimmed.fq"
             fi
             
-            # 2. Create a dummy gzipped file for R2
+            # Ensure dummy R2 placeholder file matches target extension
             touch {output.r2_p}
-            echo "Single-end mode: Processed R1 and created dummy R2.gz" >> {log}
         fi
         """
