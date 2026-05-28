@@ -94,7 +94,7 @@ Bookmarks
    ```
    8. local_runinfo.csv is generated using fastq file names
 
-<a id="2.2 Download Reference"></a>
+<a id="2.2-Download-Reference"></a>
 ## 2.2 Download Reference
    NCBI and Ensembl reference source can be selected.
    
