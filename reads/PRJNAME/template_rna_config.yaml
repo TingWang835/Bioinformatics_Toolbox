@@ -1,0 +1,114 @@
+# ~~~~~RNAseq Template~~~~~
+
+
+# =============================================================================
+# General Variables
+# =============================================================================
+
+# Reference name
+REFNAME: "Yeast_S288C"
+
+# Source to download references (ncbi or ensembl)
+REF_SOURCE: "ensembl"
+
+#PRJN number (only used in getdata_sra)
+PRJNUMBER: "PRJNA611978"
+
+# Project name
+PRJNAME: "rna_Dunham_2020"
+
+# =============================================================================
+# Ref variables (source dependent)
+# =============================================================================
+# (optional) NCBI source variable
+# Accession number 
+ACC: "GCF_000146045.2"
+
+# (optional) Ensemble source variables
+# Latin name of the species (case insensitive)
+SPECIES_LATIN: "saccharomyces_cerevisiae" 
+#Assembly number
+ASSEMBLY: "R64-1-1"
+# Release version
+RELEASE: 112
+
+# =============================================================================
+# getdata.smk specific variables
+# =============================================================================
+# choose Data source for LOCAL or SRA 
+# LOCAL: create a runinfo.csv from items under reads/{PRJNAME}
+# SRA: if runinfo.csv exist: download SRRs from runinfo.csv, else query for runinfo.csv from SRA metadata
+DATASOURCE: "SRA"
+
+# Get how many number of reads from original fastq
+N: "100000"
+
+
+# =============================================================================
+# qc.smk specific variabble
+# =============================================================================
+
+# trim quality below a certain level
+QUALITY: "20"
+
+# Minimum length to keep
+LENGTH: "15"
+
+# =============================================================================
+# rna_aligner.smk specific variables
+# =============================================================================
+
+# choose rna alinger f(star, hisat2, kallisto, salmon (use lower case!!))
+RNA_ALIGNER: "star"
+
+# (optional) Star aligner specific variable
+
+# suffix array index bases
+# Organism Class           |   Genome Size   |   Recommended sa Value
+# Small Eukaryotes / Yeast |     ~12 Mb      |      10 (Default choice)
+# Insects / Worms          | 100 Mb – 300 Mb |      12
+# Large Mammals / Plants   |     ~3 Gb+      |      14 (STAR maximum limit)
+# Bacteria                 |  ~4 Mb – 5 Mb   |       8
+STAR_SA: "10"
+
+# FeatureCournts specific variable
+
+# Tells FeatureCounts Which feature to count for
+# choose between exon(Default), CDS, gene
+FEATURE_TYPE: "exon"
+
+# Tells FeatureCounts hwo to group and sum up
+# choose between gene_id(Default), transcript_id, gene_name
+ID_ATTR: "gene_id"
+
+# =============================================================================
+# rna_diff_exp.smk specific variable
+# =============================================================================
+# choose expresssion analyser (deseq2 (Default), edger)
+EXP_ANALYSER: "deseq2"
+
+# (Optional) DESeq2 normalization (TRUE (Default), FALSE)
+DESEQ2_NORM: "TRUE"
+
+# (Optional) edgeR normalization (TMM (Default), RLE (deseq2 like), upperquartile, none )
+EDGER_NORM: "TMM"
+
+
+# for report analysis
+# P-value adjustment threshold (FDR) (Default = 0.05)
+RNA_FDR: 0.05
+
+# Absolute Log2 Fold Change threshold (Default = 1.0)
+RNA_LFC: 0.58
+
+# (Optional) Column name in runinfo.csv to use for PCA/Heatmap batch annotations 
+BATCH_COLUMN: "condition"
+
+
+# Plot background color 
+# choose from (transparent or na , white, any hex color code)
+BG_COLOR: "white"
+
+# function enrichemnt dotplot height (default = 16)
+# this is a shortcut to adhjust enrichment dotplot's height in case of word clusters on y axis
+DOTPLOT_HEIGHT: 16

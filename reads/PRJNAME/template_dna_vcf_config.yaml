@@ -15,7 +15,7 @@ REF_SOURCE: "ncbi"
 PRJNUMBER: "PRJNA257197"
 
 # Project name
-PRJNAME: "ebola_2014"
+PRJNAME: "vcf_ebola_2014"
 
 
 # =============================================================================
@@ -52,14 +52,14 @@ N: "10000"
 QUALITY: "30"
 
 # Minimum length to keep
-LENGTH: "15"
+LENGTH: "20"
 
 
 # =============================================================================
 # dna_aligner.smk specific variabble
 # =============================================================================
 # choose alinger f(bwa, bowtie2, minimap2_sr (use lower case!!))
-ALIGNER: "bwa"
+DNA_ALIGNER: "bwa"
 
 # choose sam flag for bamfilter, can by generated using https://broadinstitute.github.io/picard/explain-flags.html
 SAMFLAG: "3"
