@@ -14,8 +14,7 @@ Featuring:
 7. Organized logs and project_map, AI agent ready!
 
 Bookmarks
-[Jump to 2.2 Download Reference](#2.2-Download-Reference)
-
+[Chapter 2.2 Download Reference](#2.2-Download-Reference)
 
 # 1. How to Setup 
 ## 1.1 Setup Miniconda 3
@@ -94,7 +93,8 @@ Bookmarks
    ./run.sh your_PRJNAME runinfo
    ```
    8. local_runinfo.csv is generated using fastq file names
-   
+
+<a id="2.2 Download Reference"></a>
 ## 2.2 Download Reference
    NCBI and Ensembl reference source can be selected.
    
