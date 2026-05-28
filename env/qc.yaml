@@ -1,7 +1,9 @@
+name: qc
 channels:
-  - conda-forge
   - bioconda
+  - conda-forge
+  - defaults
 dependencies:
   - fastqc
   - trim-galore
-  - cutadapt
+  - gzip

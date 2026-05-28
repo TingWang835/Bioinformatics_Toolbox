@@ -1,3 +1,4 @@
+name: dna_aligner
 channels:
   - conda-forge
   - bioconda

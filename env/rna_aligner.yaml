@@ -1,4 +1,4 @@
-# rna_aligner.yaml
+name: rna_aligner
 channels:
   - bioconda
   - conda-forge
