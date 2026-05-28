@@ -174,7 +174,8 @@ rule functional_enrichment:
     conda:
         "../env/rna_diff_exp.yaml"
     params:
-        species_latin = species,
-        bg_color = config.get("BG_COLOR", "transparent").lower()
+        species_latin = species.lower().replace("_", "").replace(".", "").replace(" ", ""),
+        bg_color = config.get("BG_COLOR", "transparent").lower(),
+        dotplot_height = config.get("DOTPLOT_HEIGHT", 16)
     script:
         "scripts/rna_functional_enrichment.R"

@@ -335,6 +335,7 @@ rule rna_enrich:
 rule rna_all:
     """A shortcut to run a full course of RNAseq with qc, aligner, exp, report and enrich."""
     input:  
+        get_qc,
         get_rna_align,
         get_rna_bigwig,
         get_rna_counts,
@@ -345,9 +346,3 @@ rule rna_all:
 
 
 
-# =============================================================================
-# Clean up
-# =============================================================================
-rule cleanup:
-    """Cleaning up all dummy R2 files created from single end sequencing."""
-    input: f"{READS_DIR}/logs/cleanup_complete.done"

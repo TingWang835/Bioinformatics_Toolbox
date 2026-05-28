@@ -38,6 +38,8 @@ library(org_db, character.only = TRUE)
 # 2. Load and Prepare Gene Signatures
 sig_df <- read.csv(snakemake@input$sig_genes, row.names = 1, check.names = FALSE)
 gene_list <- unique(rownames(sig_df))
+# CLEANING STEP: Strip the "gene:" prefix !!
+gene_list <- gsub("^gene:", "", gene_list)
 
 if (length(gene_list) == 0) {
     stop("Aborting: Input significant gene list is empty.")
@@ -59,6 +61,8 @@ go_res <- enrichGO(
 )
 
 # 4. Handle and Export Diagnostics
+dotplotheight <- snakemake@params$dotplot_height
+
 if (is.null(go_res) || nrow(go_res) == 0) {
     message("Warning: No functional terms passed the ORA correction cutoff matrix thresholds.")
     
@@ -95,7 +99,7 @@ if (is.null(go_res) || nrow(go_res) == 0) {
         filename = snakemake@output$go_dot,
         plot     = dot_plot,
         width    = 9,
-        height   = 8,
+        height   = dotplotheight,
         dpi      = 300
     )
     message("Enrichment visualization dotplot saved to: ", snakemake@output$go_dot)
