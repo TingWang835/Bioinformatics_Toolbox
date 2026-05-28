@@ -1,17 +1,21 @@
 # Bioinformatics_Toolbox
 This is a bioinformatics toolbox running on Snakemake platform via conda environment (tested on linux).
 Main purposse: 
-1. Partially/fully automate bioinfo analysis using existing packages but with less commands
+1. Partially/fully automate bioinfo analysis using existing packages with less commands
 2. Build an expandable scaffolding that can adapt to various job reqirement.
 
 Featuring:
 1. Centeralized control via snakefile.
-2. Modularized and specialised bioinfo "tools", lower maintenance burdens.
-3. Portable and mangable environments via snakemake env control.
+2. Modularized bioinfo "tools", lower maintenance burdens.
+3. Portable environments via snakemake env control.
 4. Neatly organized output folders having everything readily assessible under reads/project_name folder.
-5. Project specific config.yaml, records variables, allows quick switch between projects.
-6. Stand alone Reference folder, allows ref sharing across projects, saving spaces, easier management.
+5. Project specific config variables, allows switching between projects with a single name change.
+6. Stand alone Reference folder, allows ref sharing across projects, saving spaces.
 7. Organized logs and project_map, AI agent ready!
+
+Bookmarks
+[Jump to 2.2 Download Reference](#2.2-Download-Reference)
+
 
 # 1. How to Setup 
 ## 1.1 Setup Miniconda 3
@@ -42,7 +46,81 @@ Featuring:
    ``` 
 
 # 2. Toolbox Functions
-## 2.1 How to Run VCF 
+## 2.1 Preparing runinfo.csv
+   runinfo.csv is dependent in multiple rules to establish the list of sample for analysis.
+
+   ### Online dataset
+   Download a runinfo.csv
+   1. Create subdirectory: reads/your_PRJNAME. 
+   2. Copy reads/Template/suitable_config.yaml to path above.
+   3. Rename it to `config.yaml`
+   4. Enter \
+            `PRJNUMBER`: "PRJNA257197" (example)\
+            `PRJNAME`: "your_PRJNAME" \
+            `DSOURCE`: "SRA"
+   5. Acitvate snakemake env, e.g. 
+   ```bash
+   conda activate snakemake
+   ```
+   6. Run following code in terminal:
+   ```bash
+   ./run.sh your_PRJNAME runinfo
+   ```
+   7. sra_runinfo.csv is downloaded to reads/your_PRJNAME/
+  
+   ### Sellecting a subset of online dataset
+   1. locate your subset on its website/journal
+   2. use terminal command to select the subset by:
+   ```bash
+   awk 'NR==1 || /^(SRR00[1-5]|SRR007|SRR00[10-11]),/' sra.runinfo.csv > filtered_runinfo.csv 
+   ```
+   3. rename filter_runinfo.csv to sra_runinfo.csv
+
+   ### Local dataset
+   1. Create subdirectory: reads/your_PRJNAME. 
+   2. Copy reads/Template/suitable_config.yaml to path above.
+   3. Rename it to `config.yaml`
+   4. Enter \
+            `PRJNUMBER`: "LOCAL" \
+            `PRJNAME`: "your_PRJNAME" \
+            `DSOURCE`: "LOCAL"
+   5. Place you fastq files under reads/your_PRJNAME/
+   6. Acitvate snakemake env, e.g. 
+   ```bash
+   conda activate snakemake
+   ```
+   7. Run following code in terminal:
+   ```bash
+   ./run.sh your_PRJNAME runinfo
+   ```
+   8. local_runinfo.csv is generated using fastq file names
+   
+## 2.2 Download Reference
+   NCBI and Ensembl reference source can be selected.
+   
+   ### NCBI
+   Enter config variables \
+          `REFNAME`: "your_REFNAME" \
+         `REF_SOURCE`: "NCBI" \
+         `ACC`: e.g. "AF086833" (example) 
+
+   ### Ensembl
+   Enter config variables \
+         `REFNAME`: "your_REFNAME" \
+         `REF_SOURCE`: "ENSEMBL" \
+         `SPECIES_LATIN`: "saccharomyces_cerevisiae" (example) \
+         `ASSEMBLY`: "R64-1-1" (example) \
+         `RELEASE`: 112 (example)
+
+   
+   In your snakemake env terminal enter:
+   ```bash
+   ./run.sh your_PRJNAME download_ref
+  ```
+
+
+
+## 2.2 Running VCF projects
 ### SRA online project
    To analyse data requires downloading from SRA: 
 
@@ -169,54 +247,58 @@ It is a pet project inspired by Gemini 3.0 when we chatted about TurboQuant wher
 ## Folder Structure
 ```text
 Working Directory 
-├── databases                     (databases built in analysis)
-│   └── snpeff
-│       └── [REFNAME]
-│           ├── sequence.bin
-│           ├── snpEff.config
-│           └── snpEffectPredictor.bin
-│
-├── env                            (portable environment configs)
-│   └── example_env.yaml
-│ 
+├── databases
+│   └── snpEff                        (snpeff database for vcf annotation)
+│       └── {REFNAME}                 (databases built in analysis)
+│           ├── sequence.bin
+│           ├── snpEff.config
+│           └── snpEffectPredictor.bin
+├── env
+│   └── example_env.yaml              (portable environment configs)
 ├── reads
-│   └── [PRJNAME]
-│       ├── logs                   (log files for AI agent)
-│       ├── bam                    (bam file and index)
-│       │   └── filtered           (filtered bam files and index)
-│       ├── qc                     (fastqc and multiqc files)
-│       ├── qc_trimmed             (trimmed fastq files)
-│       ├── vcf                    (merged, normalized, annotated vcf files)
-│       │   ├── consensus          (consensus fastq files)
-│       │   └── query              (stores query.csv, query.vcf.gz and index)
-│       ├── dna_rigidity           (tsv and bedgraph files containing DNA rigidity scores)
-│       ├── config.yaml            (project specific variables)
-│       ├── sra/local_runinfo.csv  (sample list)
+│   ├── {RNAseq_project}
+│   │   ├── bam                       (bam file and index by Star or Hisat2 aligner)
+│   │   │   └── bigwig                (bigwig files for better IGV visualization)
+│   │   ├── counts
+│   │   │   ├── pseudo_individual     (gene count by kallisto or Salmon pseudo aligner)
+│   │   │   └── sequence_individual   (gene count by FeatureCount from bam)
+│   │   ├── expression                (expression results from DESeq2, edgeR, fold change and functional enrichment)
+│   │   │   └── plots                 (pca, diagnostic plots, volcano, heatmap and enrichment dotplot)
+│   │   ├── logs                      (log files for AI agent)
+│   │   ├── qc                        (qc and multiqc files)
+│   │   ├── qc_trimmed                (trimmed fq.gz files)
+│   │   ├── config.yaml               (project specific variables)
+│   │   ├── sra/local_runinfo.csv     (sample list)
+│   │   └── example_1.fastq
+│   │
+│   └── {VCF_project}
+│       ├── logs                      (log files for AI agent)
+│       ├── bam                       (bam file and index)
+│       │   └── filtered              (filtered bam files and index)
+│       ├── qc                        (fastqc and multiqc files)
+│       ├── qc_trimmed                (trimmed fastq files)
+│       ├── vcf                       (merged, normalized, annotated vcf files)
+│       │   ├── consensus             (consensus fastq files)
+│       │   └── query                 (stores query.csv, query.vcf.gz and index)
+│       ├── dna_rigidity              (tsv and bedgraph files containing DNA rigidity scores)
+│       ├── config.yaml               (project specific variables)
+│       ├── sra/local_runinfo.csv     (sample list)
 │       ├── sample_1.fastq
 │       └── sample_2.fastq
 │
 ├── refs
-│   └── [REFNAME]
-│       ├── ACC.fa
-│       ├── ACC.fa.fai
-│       ├── ACC.gff
-│       └── aligner.index
+│   └── {REFNAME}
+│       ├── ensembl                   (ncbi reference files, fa, gff3)
+│       └── ncbi                      (ncbi reference files, fa, gff3)
 │
-├── toolbox                        (Store modularized tools)
-│   └── scripts                    (original scripts)
-│   │   └── dna_rigidity.py        (a script for DNA rigidity score recorded in .tsv) 
-│   ├── getdata.smk                (download/register fastq under reads/PRJNAME, download fa and gff from SRA and create index)
-│   ├── qc.smk                     (QC fastq files and trim)
-│   ├── aligner.smk                (align trimmed fastq to refs to create bam and filtered bam)
-│   ├── vcf.smk                    (call, merge, norm and annotate vcf, also creates consensus fastq)
-│   ├── dna_rigidity.smk           (run DNA rigidity on histone using fasta reference, rigid:5, flexible:-3, baseline:0)
-│   └── cleanup.smk                (cleaning up dummy r2 files created from running single end sequences)
+├── toolbox                           (Modularized tools)
+│   └── scripts                       (python and R scripts)
 │
-├── Snakefile                      (central control)
-├── run.sh                         (command shortcut)
-├── bcfquery.sh                    (commands to query annotated vcf)
-├── PROJECT_MAP.md                 (project map for AI agent)
-├── environment.yml                (used in snakemake setup)
+├── Snakefile                         (central control)
+├── run.sh                            (command shortcut)
+├── bcfquery.sh                       (commands to query annotated vcf)
+├── PROJECT_MAP.md                    (project map for AI agent)
+├── snakemake_install.yml             (portable snakemake env setup file)
 └── README.md
 
 ```
