@@ -1,6 +1,6 @@
 .snakemake/
 reads/*
-!reads/PRJNAME
+!reads/Template
 refs/
 note.txt
 databases/
