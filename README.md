@@ -231,7 +231,7 @@ You can run:`./ run.sh your_PRJNAME note ` at any time to check available functi
 
    ### How to score DNA rigidity?
    1. Create project folder: `reads/your_PRJNAME` 
-   2. Copy dna_rigidity_config.yaml to you project file and rename to config,yaml 
+   2. Copy dna_rigidity_config.yaml to you project file and rename to config.yaml 
    3. If you are running an ongoing VCF or other DNA project, their config template will cover all for rigidity.
 
    In your snakemake env terminal enter:
