@@ -1,5 +1,5 @@
 # Bioinformatics_Toolbox
-This is a bioinformatics toolbox running on Snakemake platform via conda environment (tested on linux).
+This is a bioinformatics toolbox running on Snakemake platform via conda environment (tested on linux). \
 Main purposse: 
 1. Partially/fully automate bioinfo analysis using existing packages with less commands
 2. Build an expandable scaffolding that can adapt to various job reqirement.
@@ -98,7 +98,7 @@ You can run:`./ run.sh your_PRJNAME note ` at any time to check available functi
    ```
    7. sra_runinfo.csv is downloaded to reads/your_PRJNAME/
   
-   ### Sellecting a subset of online dataset
+   ### Selecting a subset of online dataset
    1. locate your subset on its website/journal
    2. use terminal command to select the subset by:
    ```bash
