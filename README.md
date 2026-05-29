@@ -34,7 +34,7 @@ RNAseq related functions \
 [2.9 Expression report analysis Heatmap and function enrichment](#2.9-expression-report-analysis-heatmap-and-function-enrichment) \
 Clean up excessive files \
 [2.final Clean up](#2.final-Clean-up)
-3. Folder Structure
+3. Folder Structure \
 [3.Folder Structure tree diagram](#3.Folder-Structure-tree-diagram)
 
 
