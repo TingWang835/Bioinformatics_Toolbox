@@ -1,0 +1,30 @@
+# ~~~~~ Ridigity Template~~~~~
+
+# =============================================================================
+# General Variables
+# =============================================================================
+
+# Reference name
+REFNAME: "ebola_1976"
+
+# Source to download references (ncbi or ensembl)
+REF_SOURCE: "ncbi"
+
+# Project name
+PRJNAME: "vcf_ebola_2014"
+
+
+# =============================================================================
+# Ref variables (source dependent)
+# =============================================================================
+# (optional) NCBI source variable
+# Accession number 
+ACC: "AF086833"
+
+# (optional) Ensemble source variables
+# Latin name of the species (case insensitive)
+SPECIES_LATIN: "saccharomyces_cerevisiae" 
+#Assembly number
+ASSEMBLY: "R64-1-1"
+# Release version
+RELEASE: 112

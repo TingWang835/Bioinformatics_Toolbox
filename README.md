@@ -230,27 +230,16 @@ You can run:`./ run.sh your_PRJNAME note ` at any time to check available functi
    It is a pet project inspired by Gemini AI on the topic of TurboQuant where we found similarity between the this latest spherical compression logic and the mechanism of DNA compression by histone.
 
    ### How to score DNA rigidity?
-   1. Create subdirectory: 'reads/your_project_name'. 
-   2. Copy reads/Template/dna_vcf_config.yaml to path above.
-   3. Enter config variables for NCBI \
-         `PRJNAME`: "your_PRJNAME" \
-         `REFNAME`: "your_REFNAME" \
-         `REF_SOURCE`: "NCBI" \
-         `ACC`: e.g. "AF086833" (example) 
+   1. Create project folder: `reads/your_PRJNAME` 
+   2. Copy dna_rigidity_config.yaml to you project file and rename to config,yaml 
+   3. If you are running an ongoing VCF or other DNA project, their config template will cover all for rigidity.
 
-      OR for Ensembl \
-         `PRJNAME`: "your_PRJNAME" \
-         `REFNAME`: "your_REFNAME"
-         `REF_SOURCE`: "ENSEMBL" \
-         `SPECIES_LATIN`: "saccharomyces_cerevisiae" (example) \
-         `ASSEMBLY`: "R64-1-1" (example) \
-         `RELEASE`: 112 (example)
-   
-   4. run the following command in terminal.
+   In your snakemake env terminal enter:
    ```bash
    ./run.sh your_PRJNAME dna_rigid
    ```
-   6.File locations:
+   
+   File locations:
    tsv and bedgraph: `reads/your_project_name/dna_rigidity/`
 
    ### Score interpretation: 
