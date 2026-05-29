@@ -8,16 +8,43 @@ Featuring:
 1. Centeralized control via snakefile.
 2. Modularized bioinfo "tools", lower maintenance burdens.
 3. Portable environments via snakemake env control.
+4. Tolerates single and pair end sequences.
 4. Neatly organized output folders having everything readily assessible under reads/project_name folder.
 5. Project specific config variables, allows switching between projects with a single name change.
 6. Stand alone Reference folder, allows ref sharing across projects, saving spaces.
 7. Organized logs and project_map, AI agent ready!
 
-Bookmarks
-[Chapter 2.2 Download Reference](#2.2-Download-Reference)
 
-# 1. How to Setup 
-## 1.1 Setup Miniconda 3
+### Bookmarks 
+1. Setups \
+[1.1 Setup Miniconda 3](#1.1-Miniconda-3) \
+[1.2 Setup Snakemake](#1.2-Snakemake)
+2. Toolbox Functions \
+Universal functions \
+[2.1 Preparing runinfo.csv](#2.1-Preparing-runinfo.csv) \
+[2.2 Download Reference](#2.2-Download-Reference) \
+[2.3 QC](#2.3-QC) \
+DNA and VCF related functions \
+[2.4 DNA Aligner](#2.4-DNA-Aligner) \
+[2.5 VCF](#2.5-VCF) \
+[2.6 DNA rigidity score](#2.6-DNA-rigidity-score) \
+RNAseq related functions \
+[2.7 RNA Aligner](#2.7-RNA-aligner) \
+[2.8 RNA expression and tools compare](#2.8-RNA-expression) \
+[2.9 Expression report analysis Heatmap and function enrichment](#2.9-expression-report-analysis-heatmap-and-function-enrichment) \
+Clean up excessive files \
+[2.final Clean up](#2.final-Clean-up)
+3. Folder Structure
+[3.Folder Structure tree diagram](#3.Folder-Structure-tree-diagram)
+
+
+
+
+
+
+# 1. Setups 
+<a id="1.1-Miniconda-3"></a>
+## 1.1 Miniconda 3
    1. Downlaod latest miniconda 3
    ```bash
       wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh
@@ -30,8 +57,8 @@ Bookmarks
    ```bash
       source ~/.bashrc
    ```
-
-## 1.2 Setup Snakemake
+<a id="1.2-Snakemake"></a>
+## 1.2 Snakemake
    1. Download and unpack github package under your working directory.
    2. Makesure environment.yml is in the working dir.
    3. Move terminal to working dir and run:
@@ -45,18 +72,22 @@ Bookmarks
    ``` 
 
 # 2. Toolbox Functions
+You can run:`./ run.sh your_PRJNAME note ` at any time to check available functions.
+
+<a id="2.1-Preparing-runinfo.csv"></a>
 ## 2.1 Preparing runinfo.csv
    runinfo.csv is dependent in multiple rules to establish the list of sample for analysis.
 
    ### Online dataset
    Download a runinfo.csv
-   1. Create subdirectory: reads/your_PRJNAME. 
-   2. Copy reads/Template/suitable_config.yaml to path above.
+   1. Create subdirectory: `reads/your_PRJNAME`. 
+   2. Copy `reads/Template/suitable_config.yaml` to path above.
    3. Rename it to `config.yaml`
-   4. Enter \
+   4. Enter config variable\
             `PRJNUMBER`: "PRJNA257197" (example)\
             `PRJNAME`: "your_PRJNAME" \
-            `DSOURCE`: "SRA"
+            `DSOURCE`: "SRA" \
+            `N`: 10000 (download a N number of reads from origin fastq)
    5. Acitvate snakemake env, e.g. 
    ```bash
    conda activate snakemake
@@ -79,7 +110,7 @@ Bookmarks
    1. Create subdirectory: reads/your_PRJNAME. 
    2. Copy reads/Template/suitable_config.yaml to path above.
    3. Rename it to `config.yaml`
-   4. Enter \
+   4. Enter config variable\
             `PRJNUMBER`: "LOCAL" \
             `PRJNAME`: "your_PRJNAME" \
             `DSOURCE`: "LOCAL"
@@ -100,7 +131,7 @@ Bookmarks
    
    ### NCBI
    Enter config variables \
-          `REFNAME`: "your_REFNAME" \
+         `REFNAME`: "your_REFNAME" \
          `REF_SOURCE`: "NCBI" \
          `ACC`: e.g. "AF086833" (example) 
 
@@ -111,140 +142,227 @@ Bookmarks
          `SPECIES_LATIN`: "saccharomyces_cerevisiae" (example) \
          `ASSEMBLY`: "R64-1-1" (example) \
          `RELEASE`: 112 (example)
-
    
    In your snakemake env terminal enter:
    ```bash
    ./run.sh your_PRJNAME download_ref
   ```
+  
+   fasta, gff3 files will be downloaded, gtf file will be generated from gff3. \
+   File Locations: \
+   `refs/your_REFNAME/ncbi or ensembl/`
 
 
 
-## 2.2 Running VCF projects
-### SRA online project
-   To analyse data requires downloading from SRA: 
+<a id="2.3-QC"></a>
+## 2.3 QC
+   Run fastQC, mutltiQC and trim_galore on fastq files
+   Trim galore requires config variables \
+         `QUALITY`: "30"  (trims quality below 30)\
+         `LENGTH`: "20"   (minimum trimmed sequence length to kept)
 
-   1. Create subdirectory: reads/your_project_name. 
-   2. Copy reads/PRJNAME/config.yaml to path above.
-   3. Enter your project specific variables, make sure:
+   In your snakemake env terminal enter:
    ```bash
-    DSOURCE: "SRA"
-   ```
-   4. Activate your snakemake environment e.g.   
+   ./run.sh your_PRJNAME qc
+  ```
+
+  File Locations: \
+   fastQC and multiqQC results: `reads/your_PRJNAME/qc/` \
+   trim galore results: `reads/your_PRJNAME/qc_trimmed/`
+
+<a id="2.4-DNA-Aligner"></a>
+## 2.4 DNA Aligner
+   Align DNA sequences to ref using bwa, bowtie2 or minimap2_sr, then filtered the bam files by mapping quality and SAMflags with SAMtools \
+   Can choose from 3 DNA aligner(`bwa`, `bowtie2`, `minimap2_sr`) by config: \
+         `ALIGNER`: "bwa" \
+   SAMtools view requires config variables \
+         `SAMFLAG`: "3"   [Picard Samflag Decoder](https://broadinstitute.github.io/picard/explain-flags.html) \
+         `MAPQ`: "30"
+
+   In your snakemake env terminal enter:
    ```bash
-    conda activate snakemake
-   ```  
-   5. Run the following command in terminal. 
+   ./run.sh your_PRJNAME dna_align
+  ```
+  File Locations: \
+   Aligner index:
+   `refs/your_REFNAME/ncbi or ensembl/aligner_name`\
+   Bam files:
+   `reads/your_PRJNAME/bam/` \
+   Filtered bam files:
+   `reads/your_PRJNAME/bam/filtered/`
+
+<a id="2.5-VCF"></a>
+## 2.5 VCF
+   Run VCF calling(freebayes) > create consensus.fa, merge and normalization (bcftools) > build database and annotate (SnpEff) \
+   
+   Config for freebayes: \
+         `PLOIDY`: "2" (1 for viral/haploid, 2 for human/diploid) \
+   Config for SnpEff \
+         `RAM`: "4g"  (Ram usage for vcf annotation) 
+   
+   In your snakemake env terminal enter:
    ```bash
-   ./run.sh your_project_name note 
-   ```
-   6. Select from functions listed, replacing "note" e.g.
-   ```bash
-   ./run.sh your_project_name vcf_all 
-   ```
+   ./run.sh your_PRJNAME dna_vcf
+  ```
 
-### Local project
-   To analyse data from your local sequencer: 
+   File locations:
+   Raw vcf samples: `reads/your_PRJNAME/vcf/raw/` \
+   Consensus.fa files: `reads/your_PRJNAME/vcf/consensus/` \
+   Merged and normalized vcf: `reads/your_PRJNAME/vcf/` \
+   SnpEff database: `database/snpeff/your_REFNAME/` \
+   Annotated vcf: `reads/your_PRJNAME/vcf/`
 
-   1. create subdirectory: reads/your_project_name. 
-   2. copy local fastq file(s) (accepting fq/fq.gz formats) to subdirectory above.
-   3. copy reads/PRJNAME/config.yaml to the same path.
-   4. enter your project specific variables, make sure:
-   ```bash
-    DSOURCE: "LOCAL"
-   ``` 
-   5. activate your snakemake environment e.g.   
-   ```bash
-    conda activate snakemake
-   ```  
-   6. run the following command in terminal.
-   ```bash
-   ./run.sh your_project_name note 
-   ```
-   7. select from functions listed, replacing "note" e.g.
-   ```bash
-   ./run.sh your_project_name vcf_all 
-   ```
-
-### Running selected samples
-  This toolbox uses local/sra_runinfo.csv as a list to determine which sample will be analysed.
-
-  In a SRA project, runinfo.csv will be downloaded using the PRJNMUBER variable.
-
-  Whereas in local project, a runinfo.csv will be generated based on the sample name(s) of the fastq files under reads/project_name folder.
-
-  To run an analysis on a selected group(s) of samples, remove the unwanted rows from local/sra_runinfo.csv, and run the toolbox as shown above.
-
-
-### Querying Annotated VCF with bcfquery.sh
+   ### Querying Annotated VCF with bcfquery.sh
    this is a shortcut built to run:
    1. vcf_interactive_query, to generate query.csv by bcftools query
    2. vcf_filter_by_query, to generate query.vcf.gz and index by using the same query condition(s)
-#### Quick way to query
-```bash
-  ./bcfquery your_project_name REGION="Chr1:100-500" INCLUDE="QUAL>50" VTYPE="indels"
-  # or
-  ./bcfquery your_project_name VTYPE="indels"
- ```
+   #### Quick way to query
+   ```bash
+    ./bcfquery your_project_name REGION="Chr1:100-500" INCLUDE="QUAL>50" VTYPE="indels"
+    # or
+    ./bcfquery your_project_name VTYPE="indels"
+   ```
    Query condition can be choosen from REGION, INCLUDE and VTYPE (for now)
 
-### Cleanup
+<a id="2.6-DNA-rigidity-score"></a>
+## 2.6 DNA rigidity score
+   ### What is it?
+   It is a pet project inspired by Gemini AI on the topic of TurboQuant where we found similarity between the this latest spherical compression logic and the mechanism of DNA compression by histone.
+
+   ### How to score DNA rigidity?
+   1. Create subdirectory: 'reads/your_project_name'. 
+   2. Copy reads/Template/dna_vcf_config.yaml to path above.
+   3. Enter config variables for NCBI \
+         `PRJNAME`: "your_PRJNAME" \
+         `REFNAME`: "your_REFNAME" \
+         `REF_SOURCE`: "NCBI" \
+         `ACC`: e.g. "AF086833" (example) 
+
+      OR for Ensembl \
+         `PRJNAME`: "your_PRJNAME" \
+         `REFNAME`: "your_REFNAME"
+         `REF_SOURCE`: "ENSEMBL" \
+         `SPECIES_LATIN`: "saccharomyces_cerevisiae" (example) \
+         `ASSEMBLY`: "R64-1-1" (example) \
+         `RELEASE`: 112 (example)
+   
+   4. run the following command in terminal.
+   ```bash
+   ./run.sh your_PRJNAME dna_rigid
+   ```
+   6.File locations:
+   tsv and bedgraph: `reads/your_project_name/dna_rigidity/`
+
+   ### Score interpretation: 
+   AT rich locale: 5.0 (rigid) \
+   GC rich locale: -3.0 (flexible) \
+   Baseline/default: 0.0 \
+   bedgraph can be piped into IGV for paralleled comparison with other results.
+
+
+<a id="2.7-RNA-aligner"></a>
+## 2.7 RNA Aligner
+   Route 1: Bam by sequence alinger (Star, Hisat2) > convert bam to bigwig > FeatureCount > merge \
+   Route 2: Pseudo counts by pseudo aligner (Salmon, Kallisto) > merge 
+
+   Can choose from RNA aligners Star, Hisat2, Salmon, Kallisto by config: \
+         `RNA_ALIGNER`: "star" \
+   Star config variable \
+         `STAR_SA`: "10"   (suffix array index bases, see config instruction for details)
+   FeatureCount config variables \
+         `FEATURE_TYPE`: "exon" 
+         `ID_ATTR`: "gene_id" (how to group and sum up)
+
+   In your snakemake env terminal enter:
+   ```bash
+   ./run.sh your_PRJNAME rna_align
+  ```
+   File Locations: \
+   Aligner index:
+   `refs/your_REFNAME/ncbi or ensembl/aligner_name`\
+   Bam files:
+   `reads/your_PRJNAME/bam/` \
+   Bigwig files:
+   `reads/your_PRJNAME/bam/bigwig/` \
+   FeatureCount files:
+   `reads/your_PRJNAME/counts/sequence_individual/` \
+   Pseudo counts files:
+   `reads/your_PRJNAME/counts/pseudo_individual/` \
+   Merged counts file:
+   `reads/your_PRJNAME/counts/`
+
+<a id="2.8-RNA-expression"></a>
+## 2.8 RNA expression and tools compare
+   Expression analysis by DESeq2 or edgeR > Compare Stat of the two analysers
+
+   Can choose DESeq2 or edgeR by config: \
+         `RXP_ANALYSER`: "deseq2" \
+   DESeq2 config variable \
+         `DESEQ2_NORM`: "TRUE"   (use DESeq2 normalize method)
+   edgeR config variables \
+         `EDGER_NORM`: "TMM"     (TMM, RLE, upperquartile, none)
+   
+   In your snakemake env terminal enter:
+   ```bash
+   ./run.sh your_PRJNAME rna_exp
+   ```
+   Re-run above using a different expression analyser, then use:
+   ```bash
+   ./run.sh your_PRJNAME tools_compare
+   ```
+   to get comparison stats and plot. 
+
+   File Locations: \
+   expression results: `reads/your_PRJNAME/expression/` \
+   tools compare results: `reads/your_PRJNAME/expression/` \
+   tools compare plots: `reads/your_PRJNAME/expression/plots/ 
+
+<a id="2.9-Expression-report-analysis-Heatmap-and-function-enrichment"></a>
+## 2.9 Expression report analysis, Heatmap and function enrichment
+   PCA > MA plot > Vocalno plot > P-value histgram> Significant different expression csv > Heatmap > Enrichment dotplot and csv
+
+   Universal config variables: \
+         `RNA_FDR`: 0.05 (adj P-value threshold) \
+         `RNA_LFC`: 0.58 (log fold change threshold) \
+         `BATCH_COLUMN`: "condition" (sample cluster defined by condition column in runinfo.csv) \
+         `BG_COLOR`: "white" (background color for plots: white, transparent/na, any hex code) \
+   function enrichment dotplot config variable:\
+         `DOTPLOT_HEIGHT`: 16   (adjest height of dotplot to resolve label coverlap)
+   
+   In your snakemake env terminal enter:
+   ```bash
+   ./run.sh your_PRJNAME rna_report
+   `/run.sh your_PRJNAME rna_enrich
+   ```
+
+   File Locations: \
+   PCA, Volcano, MA plot, Heatmap, P-value histgram, enrichment dotplot: \
+   `reads/your_PRJNAME/expression/plots` \
+   significant Diff Expression.csv, enrichment GO result: \
+    `reads/your_PRJNAME/expression/` 
+
+
+
+<a id="2.final-Clean-up"></a>
+## 2.final Clean up
+
    For Snakemake to accept both single and paired end sequences without throwing a "tamturm", dummy r2 files are created in multiple steps.
 
    To clean up the dummy files, use command in terminal:
    ```bash
    ./run.sh your_project_name cleanup
    ```
+   To re-run `cleanup` function, remove cleanup_complete.done under path: \
+   `reads/your_project_name/log/` 
+
+
    !!! Only use this function after all analysis were done, snakemake will re-create these files when further analysis was conducted !!!
 
 
 
-## 2.2 DNA rigidity score
-### What is it?
-It is a pet project inspired by Gemini 3.0 when we chatted about TurboQuant where we found similarity between the this latest spherical compression logic and the mechanism of DNA compression by histone.
+<a id="3.Folder-Structure-tree-diagram"></a>
+## 3.Folder Structure tree diagram
 
-### How to score DNA rigidity?
-   1. Create subdirectory: reads/your_project_name. 
-   2. Copy reads/PRJNAME/config.yaml to path above.
-   3. Enter the variables for downloading the right reference. (ACC and REFNAME)
-   4. activate your snakemake environment e.g.   
-   ```bash
-    conda activate snakemake
-   ```  
-   5. run the following command in terminal.
-   ```bash
-   ./run.sh your_project_name rigid 
-   ```
-   6. tsv and bedgraph files will be produced with chromosome as id, position and rigidity score. For AT rich rigid position the score is 5.0, and GC rich flexible position: -3.0, baseline/default: 0.0, bedgraph can be piped into IGV for paralleled comparison with other results.
-
-
-
-
-
-
-# 3. Variables in config.yaml (What they do)
-### Common variables
-1. ACC: identify reference (fa and gff3) for download; 
-2. REFNAME: naming subdirectory for reference files under refs/
-3. PRJNUMBER: Identify online project from SRA, for accquiring runinfo.csv
-4. PRJNAME: naming subdirectory for sample(s) and other analysis outputs under reads/
-
-### getdata.smk specific variables
-5. DSOURCE: data source, select between 'SRA' and 'LOCAL'
-6. N: the number of reads grep from online SRR.fastq files, default = 10000
-
-### aligner.smk specific variables
-7. ALIGNER: select aligner package (available: bwa, bowtie2, minimap2_sr)
-8. SAMFLAG: sam flag number for bam filtering, default = 3 (paired + proper paired), encoding by [picard samflag](https://broadinstitute.github.io/picard/explain-flags.html)
-9. MAPQ: mapping quality score for bam filtering
-
-### vcf.smk specific variables
-10. PLOIDY: viral/haploid: 1, human/diploid: 2, default = 2
-11. RAM: ram space used for vcf annotation, default = 4g
-
-
-
-## Folder Structure
 ```text
 Working Directory 
 ├── databases

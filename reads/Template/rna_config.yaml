@@ -77,7 +77,7 @@ STAR_SA: "10"
 # choose between exon(Default), CDS, gene
 FEATURE_TYPE: "exon"
 
-# Tells FeatureCounts hwo to group and sum up
+# Tells FeatureCounts how to group and sum up
 # choose between gene_id(Default), transcript_id, gene_name
 ID_ATTR: "gene_id"
 
