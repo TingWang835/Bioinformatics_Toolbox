@@ -1,30 +1,24 @@
-# ~~~~~ Ridigity Template~~~~~
+# ~~~~~ VCF Template~~~~~
+
 
 # =============================================================================
 # General Variables
 # =============================================================================
 
-# Reference name
-REFNAME: "ebola_1976"
+#PRJN number (only used in getdata_sra)
+PRJNUMBER: "PRJNA257197"
 
-# Source to download references (ncbi or ensembl)
-REF_SOURCE: "ncbi"
-
-# Project name
-PRJNAME: "vcf_ebola_2014"
+# Project name 
+PRJNAME: "dna_ebola_2014"
 
 
 # =============================================================================
-# Ref variables (source dependent)
+# Ref variables 
 # =============================================================================
-# (optional) NCBI source variable
-# Accession number 
-ACC: "AF086833"
 
-# (optional) Ensemble source variables
-# Latin name of the species (case insensitive)
-SPECIES_LATIN: "saccharomyces_cerevisiae" 
-#Assembly number
-ASSEMBLY: "R64-1-1"
-# Release version
-RELEASE: 112
+REF: 
+  SOURCE: "ncbi"
+  SPECIES: "zaire_ebolavirus"
+  ASSEMBLY: "GCF_000848505.1" # e.g. ncbi: GRCh38, ensembl: R64-2-1
+  RELEASE: "2" # ncbi: p14 (patch #), ensemble: 83
+  ACC: "GCF_000848505.1" # leave empty for ensembl

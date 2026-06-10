@@ -5,32 +5,23 @@
 # General Variables
 # =============================================================================
 
-# Reference name
-REFNAME: "Yeast_S288C"
-
-# Source to download references (ncbi or ensembl)
-REF_SOURCE: "ensembl"
-
 #PRJN number (only used in getdata_sra)
-PRJNUMBER: "PRJNA611978"
+PRJNUMBER: "PRJNA306490"
 
-# Project name
+# Project name 
 PRJNAME: "rna_Dunham_2020"
 
-# =============================================================================
-# Ref variables (source dependent)
-# =============================================================================
-# (optional) NCBI source variable
-# Accession number 
-ACC: "GCF_000146045.2"
 
-# (optional) Ensemble source variables
-# Latin name of the species (case insensitive)
-SPECIES_LATIN: "saccharomyces_cerevisiae" 
-#Assembly number
-ASSEMBLY: "R64-1-1"
-# Release version
-RELEASE: 112
+# =============================================================================
+# Ref variables 
+# =============================================================================
+
+REF: 
+  SOURCE: "ensembl"
+  SPECIES: "saccharomyces_cerevisiae"
+  ASSEMBLY: "R64-1-1" # e.g. ncbi: GRCh38, ensembl: R64-2-1
+  RELEASE: "112" # ncbi: p14 (patch #), ensemble: 83
+  ACC: "" # leave empty for ensembl
 
 # =============================================================================
 # getdata.smk specific variables
@@ -59,7 +50,7 @@ LENGTH: "15"
 # =============================================================================
 
 # choose rna alinger f(star, hisat2, kallisto, salmon (use lower case!!))
-RNA_ALIGNER: "star"
+RNA_ALIGNER: "kallisto"
 
 # (optional) Star aligner specific variable
 
@@ -71,13 +62,17 @@ RNA_ALIGNER: "star"
 # Bacteria                 |  ~4 Mb – 5 Mb   |       8
 STAR_SA: "10"
 
+#(optional) Kallisto variables
+KALLISTO_FRAG_LEN: "40" # default 200
+KALLISTO_FRAG_SD: "20" # default 20 (%)
+
 # FeatureCournts specific variable
 
 # Tells FeatureCounts Which feature to count for
 # choose between exon(Default), CDS, gene
 FEATURE_TYPE: "exon"
 
-# Tells FeatureCounts how to group and sum up
+# Tells FeatureCounts hwo to group and sum up
 # choose between gene_id(Default), transcript_id, gene_name
 ID_ATTR: "gene_id"
 
