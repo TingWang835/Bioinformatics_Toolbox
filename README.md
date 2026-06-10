@@ -84,10 +84,12 @@ You can run:`./ run.sh your_PRJNAME note ` at any time to check available functi
    2. Copy `reads/Template/suitable_config.yaml` to path above.
    3. Rename it to `config.yaml`
    4. Enter config variable\
-            `PRJNUMBER`: "PRJNA257197" (example)\
-            `PRJNAME`: "your_PRJNAME" \
-            `DSOURCE`: "SRA" \
-            `N`: 10000 (download a N number of reads from origin fastq)
+   ```yaml
+            `PRJNUMBER`: "PRJNA257197" # example
+            `PRJNAME`: "your_PRJNAME" 
+            `DSOURCE`: "SRA" 
+            `N`: 10000 # download a N number of reads from origin fastq
+   ```
    5. Acitvate snakemake env, e.g. 
    ```bash
    conda activate snakemake
@@ -111,9 +113,11 @@ You can run:`./ run.sh your_PRJNAME note ` at any time to check available functi
    2. Copy reads/Template/suitable_config.yaml to path above.
    3. Rename it to `config.yaml`
    4. Enter config variable\
-            `PRJNUMBER`: "LOCAL" \
-            `PRJNAME`: "your_PRJNAME" \
+   ```yaml
+            `PRJNUMBER`: "LOCAL" 
+            `PRJNAME`: "your_PRJNAME" 
             `DSOURCE`: "LOCAL"
+   ```
    5. Place you fastq files under reads/your_PRJNAME/
    6. Acitvate snakemake env, e.g. 
    ```bash
@@ -128,14 +132,14 @@ You can run:`./ run.sh your_PRJNAME note ` at any time to check available functi
 <a id="2.2-Download-Reference"></a>
 ## 2.2 Download Reference
   Enter the following config variables:
-```yaml
+   ```yaml
    REF: 
       SOURCE: "ncbi" # choose between "ncbi" and "ensembl"
       SPECIES: "zaire_ebolavirus" # latin name for species
       ASSEMBLY: "GCF_000848505.1" # e.g. ncbi: GRCh38, ensembl: R64-2-1
       RELEASE: "2" # e.g. ncbi: p14 (patch #), ensemble: 83
       ACC: "GCF_000848505.1" # leave empty for ensembl
-```
+   ```
    
    In your snakemake env terminal enter:
    ```bash
@@ -152,8 +156,10 @@ You can run:`./ run.sh your_PRJNAME note ` at any time to check available functi
 ## 2.3 QC
    Run fastQC, mutltiQC and trim_galore on fastq files
    Trim galore requires config variables \
-         `QUALITY`: "30"  (trims quality below 30)\
-         `LENGTH`: "20"   (minimum trimmed sequence length to kept)
+   ```yaml
+         `QUALITY`: "30"  # trims quality below 30
+         `LENGTH`: "20"   # minimum trimmed sequence length to kept
+   ```
 
    In your snakemake env terminal enter:
    ```bash
@@ -170,8 +176,11 @@ You can run:`./ run.sh your_PRJNAME note ` at any time to check available functi
    Can choose from 3 DNA aligner(`bwa`, `bowtie2`, `minimap2_sr`) by config: \
          `ALIGNER`: "bwa" \
    SAMtools view requires config variables \
-         `SAMFLAG`: "3"   [Picard Samflag Decoder](https://broadinstitute.github.io/picard/explain-flags.html) \
+   ```yaml
+         `SAMFLAG`: "3"   
          `MAPQ`: "30"
+   ```
+   [Picard Samflag Decoder](https://broadinstitute.github.io/picard/explain-flags.html) 
 
    In your snakemake env terminal enter:
    ```bash
@@ -190,9 +199,13 @@ You can run:`./ run.sh your_PRJNAME note ` at any time to check available functi
    Run VCF calling(freebayes) > create consensus.fa, merge and normalization (bcftools) > build database and annotate (SnpEff) \
    
    Config for freebayes: \
-         `PLOIDY`: "2" (1 for viral/haploid, 2 for human/diploid) \
+   ```yaml
+         `PLOIDY`: "2" # 1 for viral/haploid, 2 for human/diploid)
+   ```
    Config for SnpEff \
-         `RAM`: "4g"  (Ram usage for vcf annotation) 
+   ```yaml
+         `RAM`: "4g"  # Ram usage for vcf annotation
+   ```
    
    In your snakemake env terminal enter:
    ```bash
@@ -251,10 +264,19 @@ You can run:`./ run.sh your_PRJNAME note ` at any time to check available functi
    Can choose from RNA aligners Star, Hisat2, Salmon, Kallisto by config: \
          `RNA_ALIGNER`: "star" \
    Star config variable \
-         `STAR_SA`: "10"   (suffix array index bases, see config instruction for details)
+   ```yaml
+         `STAR_SA`: "10"   # suffix array index bases, see config instruction for details
+   ```
+   Kallisto config variable \
+   ```yaml
+         KALLISTO_FRAG_LEN: "40" # default 200
+         KALLISTO_FRAG_SD: "20" # default 20 (%)
+   ```
    FeatureCount config variables \
+   ```yaml
          `FEATURE_TYPE`: "exon" 
-         `ID_ATTR`: "gene_id" (how to group and sum up)
+         `ID_ATTR`: "gene_id" # how to group and sum up
+   ```
 
    In your snakemake env terminal enter:
    ```bash
@@ -281,9 +303,13 @@ You can run:`./ run.sh your_PRJNAME note ` at any time to check available functi
    Can choose DESeq2 or edgeR by config: \
          `RXP_ANALYSER`: "deseq2" \
    DESeq2 config variable \
-         `DESEQ2_NORM`: "TRUE"   (use DESeq2 normalize method)
+   ```yaml
+         `DESEQ2_NORM`: "TRUE"   # use DESeq2 normalize method
+   ```
    edgeR config variables \
-         `EDGER_NORM`: "TMM"     (TMM, RLE, upperquartile, none)
+   ```yaml
+         `EDGER_NORM`: "TMM"     #TMM, RLE, upperquartile, none
+   ```
    
    In your snakemake env terminal enter:
    ```bash
@@ -305,12 +331,16 @@ You can run:`./ run.sh your_PRJNAME note ` at any time to check available functi
    PCA > MA plot > Vocalno plot > P-value histgram> Significant different expression csv > Heatmap > Enrichment dotplot and csv
 
    Universal config variables: \
-         `RNA_FDR`: 0.05 (adj P-value threshold) \
-         `RNA_LFC`: 0.58 (log fold change threshold) \
-         `BATCH_COLUMN`: "condition" (sample cluster defined by condition column in runinfo.csv) \
-         `BG_COLOR`: "white" (background color for plots: white, transparent/na, any hex code) \
+   ```yaml
+         `RNA_FDR`: 0.05 # adj P-value threshold
+         `RNA_LFC`: 0.58 # log fold change threshold
+         `BATCH_COLUMN`: "condition" # sample cluster defined by condition column in runinfo.csv
+         `BG_COLOR`: "white" # background color for plots: white, transparent/na, any hex code
+   ```
    function enrichment dotplot config variable:\
-         `DOTPLOT_HEIGHT`: 16   (adjest height of dotplot to resolve label coverlap)
+   ```yaml
+         `DOTPLOT_HEIGHT`: 16   # adjest height of dotplot to resolve label coverlap
+   ```
    
    In your snakemake env terminal enter:
    ```bash
