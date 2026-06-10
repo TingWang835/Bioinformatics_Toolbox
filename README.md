@@ -83,7 +83,7 @@ You can run:`./ run.sh your_PRJNAME note ` at any time to check available functi
    1. Create subdirectory: `reads/your_PRJNAME`. 
    2. Copy `reads/Template/suitable_config.yaml` to path above.
    3. Rename it to `config.yaml`
-   4. Enter config variable\
+   4. Enter config variable
    ```yaml
             `PRJNUMBER`: "PRJNA257197" # example
             `PRJNAME`: "your_PRJNAME" 
@@ -112,7 +112,7 @@ You can run:`./ run.sh your_PRJNAME note ` at any time to check available functi
    1. Create subdirectory: reads/your_PRJNAME. 
    2. Copy reads/Template/suitable_config.yaml to path above.
    3. Rename it to `config.yaml`
-   4. Enter config variable\
+   4. Enter config variable
    ```yaml
             `PRJNUMBER`: "LOCAL" 
             `PRJNAME`: "your_PRJNAME" 
@@ -155,7 +155,7 @@ You can run:`./ run.sh your_PRJNAME note ` at any time to check available functi
 <a id="2.3-QC"></a>
 ## 2.3 QC
    Run fastQC, mutltiQC and trim_galore on fastq files
-   Trim galore requires config variables \
+   Trim galore requires config variables 
    ```yaml
          `QUALITY`: "30"  # trims quality below 30
          `LENGTH`: "20"   # minimum trimmed sequence length to kept
@@ -175,7 +175,7 @@ You can run:`./ run.sh your_PRJNAME note ` at any time to check available functi
    Align DNA sequences to ref using bwa, bowtie2 or minimap2_sr, then filtered the bam files by mapping quality and SAMflags with SAMtools \
    Can choose from 3 DNA aligner(`bwa`, `bowtie2`, `minimap2_sr`) by config: \
          `ALIGNER`: "bwa" \
-   SAMtools view requires config variables \
+   SAMtools view requires config variables 
    ```yaml
          `SAMFLAG`: "3"   
          `MAPQ`: "30"
@@ -198,11 +198,11 @@ You can run:`./ run.sh your_PRJNAME note ` at any time to check available functi
 ## 2.5 VCF
    Run VCF calling(freebayes) > create consensus.fa, merge and normalization (bcftools) > build database and annotate (SnpEff) \
    
-   Config for freebayes: \
+   Config for freebayes: 
    ```yaml
          `PLOIDY`: "2" # 1 for viral/haploid, 2 for human/diploid)
    ```
-   Config for SnpEff \
+   Config for SnpEff 
    ```yaml
          `RAM`: "4g"  # Ram usage for vcf annotation
    ```
@@ -263,16 +263,16 @@ You can run:`./ run.sh your_PRJNAME note ` at any time to check available functi
 
    Can choose from RNA aligners Star, Hisat2, Salmon, Kallisto by config: \
          `RNA_ALIGNER`: "star" \
-   Star config variable \
+   Star config variable 
    ```yaml
          `STAR_SA`: "10"   # suffix array index bases, see config instruction for details
    ```
-   Kallisto config variable \
+   Kallisto config variable 
    ```yaml
          KALLISTO_FRAG_LEN: "40" # default 200
          KALLISTO_FRAG_SD: "20" # default 20 (%)
    ```
-   FeatureCount config variables \
+   FeatureCount config variables 
    ```yaml
          `FEATURE_TYPE`: "exon" 
          `ID_ATTR`: "gene_id" # how to group and sum up
@@ -302,11 +302,11 @@ You can run:`./ run.sh your_PRJNAME note ` at any time to check available functi
 
    Can choose DESeq2 or edgeR by config: \
          `RXP_ANALYSER`: "deseq2" \
-   DESeq2 config variable \
+   DESeq2 config variable 
    ```yaml
          `DESEQ2_NORM`: "TRUE"   # use DESeq2 normalize method
    ```
-   edgeR config variables \
+   edgeR config variables 
    ```yaml
          `EDGER_NORM`: "TMM"     #TMM, RLE, upperquartile, none
    ```
@@ -330,14 +330,14 @@ You can run:`./ run.sh your_PRJNAME note ` at any time to check available functi
 ## 2.9 Expression report analysis, Heatmap and function enrichment
    PCA > MA plot > Vocalno plot > P-value histgram> Significant different expression csv > Heatmap > Enrichment dotplot and csv
 
-   Universal config variables: \
+   Universal config variables: 
    ```yaml
          `RNA_FDR`: 0.05 # adj P-value threshold
          `RNA_LFC`: 0.58 # log fold change threshold
          `BATCH_COLUMN`: "condition" # sample cluster defined by condition column in runinfo.csv
          `BG_COLOR`: "white" # background color for plots: white, transparent/na, any hex code
    ```
-   function enrichment dotplot config variable:\
+   function enrichment dotplot config variable:
    ```yaml
          `DOTPLOT_HEIGHT`: 16   # adjest height of dotplot to resolve label coverlap
    ```
