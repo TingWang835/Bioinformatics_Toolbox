@@ -5,9 +5,9 @@ localrules: tools_compare, rna_log_fold_threshold, diagnostic_plots, pca_plot, h
 def get_expression_input(wildcards):
     """Selects the correct combined count matrix based on aligner classification."""
     if rna_aligner in RNA_SPLICED_ALIGNERS:
-        return f"{READS_DIR}/counts/all_samples.{rna_aligner}_counts.csv"
+        return f"{READS_DIR}/counts/sequence/all_samples.{rna_aligner}_counts.csv"
     else:
-        return f"{READS_DIR}/counts/all_samples.{rna_aligner}_pseudo_counts.csv"
+        return f"{READS_DIR}/counts/pseudo/all_samples.{rna_aligner}_pseudo_counts.csv"
 
 # =============================================================================
 # Rules
@@ -68,7 +68,7 @@ rule tools_compare:
     Cross-references statistics between DESeq2 and edgeR outputs.
     """
     input:
-        deseq = f"{READS_DIR}/expression/deseq2_expression.{rna_aligner}_counts.csv" if rna_aligner in RNA_SPLICED_ALIGNERS else f"{READS_DIR}/expression/deseq2_expression.{rna_aligner}_pseudo_counts.csv",
+        deseq2 = f"{READS_DIR}/expression/deseq2_expression.{rna_aligner}_counts.csv" if rna_aligner in RNA_SPLICED_ALIGNERS else f"{READS_DIR}/expression/deseq2_expression.{rna_aligner}_pseudo_counts.csv",
         edger = f"{READS_DIR}/expression/edger_expression.{rna_aligner}_counts.csv" if rna_aligner in RNA_SPLICED_ALIGNERS else f"{READS_DIR}/expression/edger_expression.{rna_aligner}_pseudo_counts.csv"
     output:
         csv = f"{READS_DIR}/expression/cross_tool_comparison.csv",
@@ -174,7 +174,7 @@ rule functional_enrichment:
     conda:
         "../env/rna_diff_exp.yaml"
     params:
-        species_latin = species.lower().replace("_", "").replace(".", "").replace(" ", ""),
+        species_latin = species.replace("_", "").replace(".", "").replace(" ", ""),
         bg_color = config.get("BG_COLOR", "transparent").lower(),
         dotplot_height = config.get("DOTPLOT_HEIGHT", 16)
     script:

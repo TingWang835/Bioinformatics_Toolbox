@@ -1,3 +1,7 @@
+import os
+wildcard_constraints:
+    aligner = "star|hisat2|kallisto|salmon",
+    filename = "abundance\.tsv|quant\.sf"
 localrules:  # no local rules here due to heavy ram requirement for RNA alignment
 
 # =============================================================================
@@ -32,7 +36,7 @@ def get_align_input(wildcards):
 
 rule star_index:
     input: 
-        unpack(get_ref_source)
+        unpack(get_refs)
     output: directory(f"{REFS_DIR}/star_index")
     log: f"{LOG_DIR}/aligner/star_index.log"
     conda: "../env/rna_aligner.yaml"
@@ -42,29 +46,29 @@ rule star_index:
         """
         STAR --runMode genomeGenerate \
              --genomeDir {output} \
-             --genomeFastaFiles {input.ref} \
+             --genomeFastaFiles {input.fasta} \
              --sjdbGTFfile {input.gtf} \
              --runThreadN {threads} \
              --genomeSAindexNbases {params.sa} > {log} 2>&1
         """
 
 rule hisat2_index:
-    input: unpack(get_ref_source)
+    input: unpack(get_refs)
     output: multiext(f"{REFS_DIR}/hisat2/index", ".1.ht2", ".2.ht2", ".3.ht2", ".4.ht2", ".rev.1.ht2", ".rev.2.ht2")
     log: f"{LOG_DIR}/aligner/hisat2_index.log"
     conda: "../env/rna_aligner.yaml"
     params: prefix = f"{REFS_DIR}/hisat2/index"
-    shell: "hisat2-build {input.ref} {params.prefix} > {log} 2>&1"
+    shell: "hisat2-build {input.fasta} {params.prefix} > {log} 2>&1"
 
 rule genome_gtf_to_transcriptome: 
     """Extracts cDNA sequences from the genome using GTF coordinates, used by pseudo aligners."""
-    input: unpack(get_ref_source)
+    input: unpack(get_refs)
     output:
         fasta = f"{REFS_DIR}/transcriptome.fa"
     conda: "../env/rna_aligner.yaml"
     log: f"{LOG_DIR}/getdata/transcriptome_extract.log"
     shell:
-        "gffread {input.gtf} -g {input.ref} -w {output.fasta} > {log} 2>&1"
+        "gffread {input.gtf} -g {input.fasta} -w {output.fasta} > {log} 2>&1"
 
 rule kallisto_index:
     input: fasta = f"{REFS_DIR}/transcriptome.fa"
@@ -124,37 +128,43 @@ rule rna_sequence_align:
         samtools index {output.bam}
         """
 
+
 rule rna_pseudo_align:
     """Fast pseudo-alignment for Kallisto and Salmon (Abundance/Counts output)."""
     input:
         unpack(get_align_input),
         idx_check = get_rna_index_prefix
     output:
-        out_dir = directory(f"{READS_DIR}/counts/pseudo_individual/{{sample}}.{{aligner}}")
-    log: f"{LOG_DIR}/aligner/pseudo_align/{{sample}}.{{aligner}}.log"
+        quant_file = f"{READS_DIR}/counts/pseudo_individual/{{sample}}.{{aligner}}/{{filename}}"
+    log: f"{LOG_DIR}/aligner/pseudo_align/{{sample}}.{{aligner}}.{{filename}}.log"
     conda: "../env/rna_aligner.yaml"
     params:
+        out_dir  = f"{READS_DIR}/counts/pseudo_individual/{{sample}}.{{aligner}}",
+        frag_len = config.get("KALLISTO_FRAG_LEN", 200),
+        frag_sd  = config.get("KALLISTO_FRAG_SD", 20),
         cmd = lambda w: (
-            f"kallisto quant -i {get_rna_index_prefix(w)}" if w.aligner == "kallisto" else
-            f"salmon quant -i {get_rna_index_prefix(w)} -l A" if w.aligner == "salmon" else ""
+            "kallisto quant" if w.aligner == "kallisto" else
+            "salmon quant" if w.aligner == "salmon" else ""
         ),
         pe = lambda w, input: (
-            f"-o {READS_DIR}/counts/{w.sample}.kallisto {input.r1} {input.r2}" if w.aligner == "kallisto" else
-            f"-1 {input.r1} -2 {input.r2} -o {READS_DIR}/counts/{w.sample}.salmon"
+            f"-i {get_rna_index_prefix(w)} -o {READS_DIR}/counts/pseudo_individual/{w.sample}.kallisto {input.r1} {input.r2}" if w.aligner == "kallisto" else
+            f"-i {get_rna_index_prefix(w)} -l A -1 {input.r1} -2 {input.r2} -o {READS_DIR}/counts/pseudo_individual/{w.sample}.salmon"
         ),
+        # Corrected: Removed 'params' argument and accessed config directly
         se = lambda w, input: (
-            f"-o {READS_DIR}/counts/{w.sample}.kallisto {input.r1}" if w.aligner == "kallisto" else
-            f"-r {input.r1} -o {READS_DIR}/counts/{w.sample}.salmon"
+            f"--single -l {config.get('KALLISTO_FRAG_LEN', 200)} -s {config.get('KALLISTO_FRAG_SD', 20)} -i {get_rna_index_prefix(w)} -o {READS_DIR}/counts/pseudo_individual/{w.sample}.kallisto {input.r1}" if w.aligner == "kallisto" else
+            f"-i {get_rna_index_prefix(w)} -l A -r {input.r1} -o {READS_DIR}/counts/pseudo_individual/{w.sample}.salmon"
         )
     shell:
         """
         if [ -s "{input.r2}" ]; then
+            # Paired-End Execution
             {params.cmd} {params.pe} > {log} 2>&1
         else
+            # Single-End Execution
             {params.cmd} {params.se} > {log} 2>&1
         fi
         """
-
 # =============================================================================
 # Bam file (Sequence Alignment) after math
 # =============================================================================
@@ -190,7 +200,7 @@ rule rna_featurecount:
     Outputs raw featureCounts text reports containing genomic annotations.
     """
     input:
-        unpack(get_ref_source),
+        unpack(get_refs),
         bam = f"{READS_DIR}/bam/{{sample}}.{{aligner}}.bam",
         bai = f"{READS_DIR}/bam/{{sample}}.{{aligner}}.bam.bai"
     output:
@@ -223,7 +233,7 @@ rule merge_featurecounts:
     input:
         txts = lambda w: expand(f"{READS_DIR}/counts/sequence_individual/{{sample}}.{w.aligner}.txt", sample=get_runinfo(w))
     output:
-        csv = f"{READS_DIR}/counts/all_samples.{{aligner}}_counts.csv"
+        csv = f"{READS_DIR}/counts/sequence/all_samples.{{aligner}}_counts.csv"
     log:
         f"{LOG_DIR}/aligner/featurecounts/merge_all_samples.{{aligner}}.log"
     run:
@@ -258,7 +268,7 @@ rule merge_pseudo:
     input:
         tsvs = lambda w: expand(f"{READS_DIR}/counts/pseudo_individual/{{sample}}.{w.aligner}/abundance.tsv", sample=get_runinfo(w))
     output:
-        csv = f"{READS_DIR}/counts/all_samples.{{aligner}}_pseudo_counts.csv"
+        csv = f"{READS_DIR}/counts/pseudo/all_samples.{{aligner}}_pseudo_counts.csv"
     log:
         f"{LOG_DIR}/aligner/featurecounts/merge_all_samples.{{aligner}}_pseudo.log"
     run:
