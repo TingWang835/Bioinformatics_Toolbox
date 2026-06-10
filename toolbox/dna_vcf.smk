@@ -109,6 +109,7 @@ rule snpeff_build:
         # Step 4: cleaning up and organizing for vcfannotation compatibility
         if [ -f {output.db} ]; then
             rm {params.data_dir}/{params.genome}/genes.gff
+            rm {params.data_dir}/{params.genome}/sequences.fa
         else
             exit 1
         fi
