@@ -11,34 +11,47 @@ if not PRJNAME:
 # Load project-specific configuration from the project directory
 configfile: f"reads/{PRJNAME}/config.yaml"
 
-# --- Mandatory Configuration Checks---
-mandatory_vars = {
-    "REF_SOURCE": "choose from ncbi or ensembl",
-    "REFNAME": "Reference Genome Name (e.g., Yeast_S288C)",
-    "PRJNUMBER": "Project Number or Identifier"
+# --- Mandatory Configuration Checks ---
+if "REF" not in config or not isinstance(config["REF"], dict):
+    raise ValueError("\n\n[CONFIGURATION ERROR]\nMissing 'REF' block structure in config.yaml!\n")
+
+mandatory_ref_vars = {
+    "SOURCE": "choose from ncbi or ensembl",
+    "SPECIES": "Latin binomial name (e.g., saccharomyces_cerevisiae)",
+    "ASSEMBLY": "Major assembly build designation (e.g., R64-2-1 or GRCh38)"
 }
 
-for var, description in mandatory_vars.items():
-    if not config.get(var):
+for var, description in mandatory_ref_vars.items():
+    if not config["REF"].get(var):
         raise ValueError(
             f"\n\n[CONFIGURATION ERROR]\n"
-            f"Variable '{var}' is missing!\n"
+            f"Variable 'REF -> {var}' is missing!\n"
             f"Description: {description}\n"
-            f"Please add it to 'config/config.yaml' or provide it via: --config {var}=VALUE\n"
         )
 
 # =============================================================================
 # Unified Global Path & Context Variables
 # =============================================================================
+# REF block variables
+ref_cfg  = config["REF"]
+source   = ref_cfg["SOURCE"].lower()
+species  = ref_cfg["SPECIES"].lower()
+assembly = ref_cfg["ASSEMBLY"]
+release  = ref_cfg.get("RELEASE", "")
+acc = ref_cfg.get("ACC") or "GCF_000848505.1"
+
+# Name variations for structural renaming rules
+species_low = species.replace(" ", "_")
+species_cap = species_low.capitalize()
+
 # Path Roots
-ref_src = config.get("REF_SOURCE", "ncbi").lower()
 data_src = config.get("DATA_SOURCE", "SRA")
 base_src = config.get("DATABASE_SOURCE", "snpeff").lower()
 
-REFS_DIR = f"refs/{config['REFNAME']}/{ref_src}"
+REFS_DIR = f"refs/{source}/{species_low}/{assembly}/{release}"
 READS_DIR = f"reads/{PRJNAME}"
 LOG_DIR = f"reads/{PRJNAME}/logs"
-DATABASES_DIR = f"database/{base_src}/{config['REFNAME']}"
+DATABASES_DIR = f"databases/{base_src}/{source}.{species}.{assembly}.{release}"
 
 # aligner variables for path construction
 dna_aligner = config.get("DNA_ALIGNER", "bwa").lower()
@@ -49,31 +62,10 @@ DNA_ALIGNERS = ["bwa", "bowtie2", "minimap2_sr"]
 RNA_SPLICED_ALIGNERS = ["star", "hisat2"]
 RNA_PSEUDO_ALIGNERS = ["kallisto", "salmon"]
 
-# Ensembl specific variables
-species     = config.get("SPECIES_LATIN", "saccharomyces_cerevisiae").lower().replace(" ", "_")
-species_cap = species.capitalize()
-assembly    = config.get("ASSEMBLY", "R64-1-1")
-release     = config.get("RELEASE", 112)
-
-# NCBI specific variables
-acc = config.get("ACC", "GCF_000146045.2")
-
-
 # RNAseq expression analyser
 rna_exp_analyser = config.get("EXP_ANALYSER", "deseq2").lower()
 
 
-# =============================================================================
-# Include Modular Rule Files
-# =============================================================================
-include: "toolbox/getdata.smk" 
-include: "toolbox/qc.smk" 
-include: "toolbox/dna_aligner.smk" 
-include: "toolbox/dna_vcf.smk" 
-include: "toolbox/cleanup.smk"
-include: "toolbox/dna_rigidity.smk"
-include: "toolbox/rna_aligner.smk"
-include: "toolbox/rna_diff_exp.smk"
 
 # =============================================================================
 # Helper Functions
@@ -96,25 +88,26 @@ def get_runinfo(wildcards):
     df = pd.read_csv(cp_output) 
     return df['Run'].tolist()
 
+
 def get_refs(wildcards):
-    """Returns a list of reference files needed for alignment, tracking source-specific folder trees."""
-    source = config.get("REF_SOURCE", "ncbi").lower()
-    
+    """
+    Dynamically routes pipeline requirements to the isolated database path layout.
+    """
     if source == "ensembl":
-        asm = config.get("ASSEMBLY", "R64-1-1")
-        rel = config.get("RELEASE", 112)
-        return [
-            f"{REFS_DIR}/{species_cap}.{asm}.dna.toplevel.fa",
-            f"{REFS_DIR}/{species_cap}.{asm}.{rel}.gtf",
-            f"{REFS_DIR}/{species_cap}.{asm}.{rel}.gff3"
-        ]
+        return {
+            "fasta": f"{REFS_DIR}/{species_cap}.{assembly}.{release}.fa",
+            "gff": f"{REFS_DIR}/{species_cap}.{assembly}.{release}.gff3",
+            "gtf": f"{REFS_DIR}/{species_cap}.{assembly}.{release}.gtf"
+        }
+    elif source == "ncbi":
+        return {
+            "fasta": f"{REFS_DIR}/{acc}.fa",
+            "gff": f"{REFS_DIR}/{acc}.gff3",
+            "gtf": f"{REFS_DIR}/{acc}.gtf"
+        }
     else:
-        acc = config.get("ACC", "GCF_000146045.2")
-        return [
-            f"{REFS_DIR}/{acc}.fa",
-            f"{REFS_DIR}/{acc}.gtf",
-            f"{REFS_DIR}/{acc}.gff"
-        ]
+        raise ValueError(f"Unsupported REF_SOURCE target: {source}")
+
 
 def get_qc(wildcards):
     """Generates QC report targets, merge by multiqc and forces fastq trimming."""
@@ -158,9 +151,8 @@ def get_dna_vcf(wildcards):
 # =============================================================================
 def get_dna_rigid(wildcards): 
     """Generates rigidity profile tracks out of structural data layouts."""
-    acc = config.get("ACC", "GCF_000146045.2")
-    tsv = f"{READS_DIR}/dna_rigidity/{acc}_rigidity_profile.tsv"
-    bg = f"{READS_DIR}/dna_rigidity/{acc}_rigidity_profile.bedGraph"
+    tsv = f"{READS_DIR}/dna_rigidity/rigidity_profile.tsv"
+    bg = f"{READS_DIR}/dna_rigidity/rigidity_profile.bedGraph"
     return [tsv, bg]
 
 # =============================================================================
@@ -172,8 +164,12 @@ def get_rna_align(wildcards):
     aligner = rna_aligner
     
     if aligner in RNA_PSEUDO_ALIGNERS:
-        return expand("{rddir}/counts/{s}.{aln}",
-                      rddir=READS_DIR, s=samples, aln=aligner)
+        # Determine the file name based on the tool
+        target_file = "abundance.tsv" if aligner == "kallisto" else "quant.sf"
+        
+        # Match the path to the 'pseudo_individual' directory structure
+        return expand("{rddir}/counts/pseudo_individual/{s}.{aln}/{filename}",
+                      rddir=READS_DIR, s=samples, aln=aligner, filename=target_file)
     else:
         return expand("{rddir}/bam/{s}.{aln}.bam",
                       rddir=READS_DIR, s=samples, aln=aligner)
@@ -193,10 +189,10 @@ def get_rna_counts(wildcards):
     aligner = rna_aligner
     
     if aligner in RNA_SPLICED_ALIGNERS:
-        return [f"{READS_DIR}/counts/all_samples.{aligner}_counts.csv"]
+        return [f"{READS_DIR}/counts/sequence/all_samples.{aligner}_counts.csv"]
     else:
         # Automatically routes to your new merge_pseudo matrix for Kallisto/Salmon
-        return [f"{READS_DIR}/counts/all_samples.{aligner}_pseudo_counts.csv"]
+        return [f"{READS_DIR}/counts/pseudo/all_samples.{aligner}_pseudo_counts.csv"]
 
 def get_rna_exp_analyser_output(wildcards):
     """Determines the RNA expression target path based on EXPRESSION_ANALYSER in config."""
@@ -230,6 +226,18 @@ def get_rna_enrich_outputs(wildcards):
 
 
 # =============================================================================
+# Include Modular Rule Files
+# =============================================================================
+include: "toolbox/getdata.smk" 
+include: "toolbox/qc.smk" 
+include: "toolbox/dna_aligner.smk" 
+include: "toolbox/dna_vcf.smk" 
+include: "toolbox/cleanup.smk"
+include: "toolbox/dna_rigidity.smk"
+include: "toolbox/rna_aligner.smk"
+include: "toolbox/rna_diff_exp.smk"
+
+# =============================================================================
 # Terminal Rules
 # =============================================================================
 rule note:
@@ -240,7 +248,7 @@ rule note:
         print("Please specify a target rule:")
         print("Data/Reference Gathering")
         print("  snakemake runinfo           - Get runinfo for samples")
-        print("  snakemake download_refs     - Download fa, gff and gtf files")
+        print("  snakemake download_refs     - Download fa, gff3 and gtf files")
         print("  snakemake qc                - Download data and run QC")
         print("SNP/Variant Analysis")
         print("  snakemake dna_align         - Run DNA alignments")
@@ -266,7 +274,8 @@ rule runinfo:
 
 rule download_refs:
     """Utility run-target that safely maps upstream conversion assets."""
-    input: get_refs
+    input: 
+        lambda wildcards: list(get_refs(wildcards).values())
 
 rule qc:
     """QC for fastq files."""

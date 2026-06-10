@@ -5,10 +5,12 @@ localrules: vcfcall, vcfmerge, vcfnorm, vcfconsensus, snpeff_build, vcfannotatio
 # =============================================================================
 
 rule vcfcall:
+    """
+    Performs variant calling using freebayes and sorts/compresses the stream via bcftools.
+    """
     input:
-        unpack(get_ref_source),
-        bam = f"{READS_DIR}/bam/filtered/{{sample}}.{{aligner}}.filtered.bam",
-        fai = lambda wildcards: f"{get_ref_source(wildcards)['ref']}.fai"
+        unpack(get_refs),
+        bam   = f"{READS_DIR}/bam/filtered/{{sample}}.{{aligner}}.filtered.bam"
     output:
         vcf = temp(f"{READS_DIR}/vcf/raw/{{sample}}.{{aligner}}.vcf.gz"),
         tbi = temp(f"{READS_DIR}/vcf/raw/{{sample}}.{{aligner}}.vcf.gz.tbi")
@@ -18,11 +20,14 @@ rule vcfcall:
     log: f"{LOG_DIR}/vcf/vcfcall/{{sample}}.{{aligner}}.log"
     shell:
         """
-        freebayes -f {input.ref} --ploidy {params.ploidy} {input.bam} | bcftools view -Oz -o {output.vcf}
+        freebayes -f {input.fasta} --ploidy {params.ploidy} {input.bam} | bcftools view -Oz -o {output.vcf}
         bcftools index -t {output.vcf}
         """
 
 rule vcfmerge:
+    """
+    Merges individual sample VCF files into a multi-sample cohort VCF dataset.
+    """
     input:
         vcfs = lambda w: expand(f"{READS_DIR}/vcf/raw/{{sample}}.{w.aligner}.vcf.gz", sample=get_runinfo(w)),
         tbis = lambda w: expand(f"{READS_DIR}/vcf/raw/{{sample}}.{w.aligner}.vcf.gz.tbi", sample=get_runinfo(w))
@@ -34,8 +39,11 @@ rule vcfmerge:
         "bcftools merge {input.vcfs} -Oz -o {output.merged_vcf}"
 
 rule vcfnorm:
+    """
+    Left-aligns and normalizes indels against the reference sequence assembly.
+    """
     input:
-        unpack(get_ref_source),
+        unpack(get_refs),
         vcf = f"{READS_DIR}/vcf/all_samples.{{aligner}}.merged.vcf.gz"
     output:
         vcf_gz = f"{READS_DIR}/vcf/all_samples.{{aligner}}.merged.norm.vcf.gz",
@@ -44,13 +52,16 @@ rule vcfnorm:
     log: f"{LOG_DIR}/vcf/vcfnorm/all_samples.{{aligner}}.merged.norm.log"
     shell:
         """
-        bcftools norm -f {input.ref} -m -any {input.vcf} -Oz -o {output.vcf_gz}
+        bcftools norm -f {input.fasta} -m -any {input.vcf} -Oz -o {output.vcf_gz}
         bcftools index -t {output.vcf_gz}
         """
 
 rule vcfconsensus:
+    """
+    Applies genomic variants onto the reference assembly to extract sample-specific consensus sequences.
+    """
     input:
-        unpack(get_ref_source),
+        unpack(get_refs),
         vcf = f"{READS_DIR}/vcf/all_samples.{{aligner}}.merged.norm.vcf.gz",
         tbi = f"{READS_DIR}/vcf/all_samples.{{aligner}}.merged.norm.vcf.gz.tbi"
     output:
@@ -58,79 +69,92 @@ rule vcfconsensus:
     conda: "../env/dna_vcf.yaml"
     log: f"{LOG_DIR}/vcf/vcfconsensus/{{sample}}.{{aligner}}.consensus.log"
     shell:
-        "bcftools consensus -f {input.ref} -s {wildcards.sample} {input.vcf} > {output.fasta}"
+        "bcftools consensus -f {input.fasta} -s {wildcards.sample} {input.vcf} > {output.fasta}"
 
 # =============================================================================
-# Functional Annotation & Queries (Pending Refactoring)
+# Functional Annotation & Queries
 # =============================================================================
 
 rule snpeff_build:
+    """
+    Builds a local database instance inside snpEff structure environments.
+    """
     input:
-        fasta = f"refs/{config['REFNAME']}/{config['ACC']}.fa",
-        gff = f"refs/{config['REFNAME']}/{config['ACC']}.gff"
+        unpack(get_refs)
     output:
-        db = f"databases/snpeff/{config['REFNAME']}/snpEffectPredictor.bin"
+        db = f"{DATABASES_DIR}/snpEffectPredictor.bin"
     params:
-        genome = config['REFNAME'],
-        db_dir = "databases/snpeff"
+        data_dir = lambda w: os.path.dirname(DATABASES_DIR.rstrip("/")),
+        # Drops the path prefix to extract the exact folder name Snakemake expects
+        genome = lambda w: os.path.basename(DATABASES_DIR.rstrip("/"))
     conda: "../env/dna_vcf.yaml"
-    log: f"{LOG_DIR}/vcf/snpeff_build_{config['REFNAME']}.log"
+    log: f"{LOG_DIR}/vcf/snpeff_build.log"
     shell:
         """
-        # Step 1: create subdirectory, copy fa and gff3 files
-        mkdir -p {params.db_dir}/{params.genome}
-        cp {input.fasta} {params.db_dir}/{params.genome}/sequences.fa
-        cp {input.gff} {params.db_dir}/{params.genome}/genes.gff
+        # Step 1: create the precise nested genome subdirectory
+        mkdir -p {params.data_dir}/{params.genome}
+        cp {input.fasta} {params.data_dir}/{params.genome}/sequences.fa
+        cp {input.gff} {params.data_dir}/{params.genome}/genes.gff
 
-        # Step 2: create local snpeff.config
+        # Step 2: create local snpeff.config inside the genome directory
         ABS_PATH=$(pwd)
-        echo "{params.genome}.genome : {params.genome}" > {params.db_dir}/{params.genome}/snpEff.config
+        echo "{params.genome}.genome : {params.genome}" > {params.data_dir}/{params.genome}/snpEff.config
 
-        # Step 3: building DB
+        # Step 3: building DB pointing to the parent data directory
         snpEff build -gff3 -v {params.genome} \
-            -c $ABS_PATH/{params.db_dir}/{params.genome}/snpEff.config \
-            -dataDir $ABS_PATH/{params.db_dir} \
+            -c $ABS_PATH/{params.data_dir}/{params.genome}/snpEff.config \
+            -dataDir $ABS_PATH/{params.data_dir} \
             -noCheckCds -noCheckProtein -nodownload > {log} 2>&1
 
-        # Step 4: cleaning up
+        # Step 4: cleaning up and organizing for vcfannotation compatibility
         if [ -f {output.db} ]; then
-            rm {params.db_dir}/{params.genome}/sequences.fa
-            rm {params.db_dir}/{params.genome}/genes.gff
+            rm {params.data_dir}/{params.genome}/genes.gff
         else
             exit 1
         fi
         """
 
 rule vcfannotation:
+    """
+    Annotates localized functional variant alerts using local snpEff predictor profiles.
+    """
     input:
         vcf = f"{READS_DIR}/vcf/all_samples.{{aligner}}.merged.norm.vcf.gz",
-        db = f"databases/snpeff/{config['REFNAME']}/snpEffectPredictor.bin"
+        db = f"{DATABASES_DIR}/snpEffectPredictor.bin"
     output:
         vcf = f"{READS_DIR}/vcf/all_samples.{{aligner}}.ann.vcf.gz",
         tbi = f"{READS_DIR}/vcf/all_samples.{{aligner}}.ann.vcf.gz.tbi",
         stats = f"{READS_DIR}/vcf/all_samples.{{aligner}}.snpeff_stats.html"
     params:
-        genome = config['REFNAME'],
+        genome = lambda w: os.path.basename(DATABASES_DIR.rstrip("/")),
         ram = config.get("RAM", "4g"),
-        db_dir = "databases/snpeff"
+        db_dir = lambda w: os.path.dirname(DATABASES_DIR.rstrip("/"))
     conda: "../env/dna_vcf.yaml"
     log: f"{LOG_DIR}/vcf/vcfannotation/all_samples.{{aligner}}.ann.log"
     shell:
         """
         ABS_PATH=$(pwd)
+        
+        # Point the config directly to the single genome folder layout
+        CONFIG_PATH="$ABS_PATH/{DATABASES_DIR}/snpEff.config"
+
         snpEff -Xmx{params.ram} -v {params.genome} \
-            -c $ABS_PATH/{params.db_dir}/{params.genome}/snpEff.config \
+            -c $CONFIG_PATH \
             -dataDir $ABS_PATH/{params.db_dir} \
             -s {output.stats} {input.vcf} | bcftools view -Oz -o {output.vcf}
+            
         bcftools index -t {output.vcf}
         """
 
 rule vcf_interactive_query:
+    """
+    Extracts explicit, flattened tabular data subsets via custom user search metrics.
+    """
     input:
-        vcf = f"{READS_DIR}/vcf/all_samples.{dna_aligner}.ann.vcf.gz",
-        tbi = f"{READS_DIR}/vcf/all_samples.{dna_aligner}.ann.vcf.gz.tbi"
+        vcf = f"{READS_DIR}/vcf/all_samples.{{aligner}}.ann.vcf.gz",
+        tbi = f"{READS_DIR}/vcf/all_samples.{{aligner}}.ann.vcf.gz.tbi"
     output:
-        report = f"{READS_DIR}/vcf/query/interactive_report.csv"
+        report = f"{READS_DIR}/vcf/query/interactive_report.{{aligner}}.csv"
     params:
         region = lambda w: f"-r {str(config.get('REGION', ''))}" if config.get('REGION') else "",
         include = lambda w: f"-i '{str(config.get('INCLUDE', ''))}'" if config.get('INCLUDE') else "",
@@ -150,12 +174,15 @@ rule vcf_interactive_query:
         """
 
 rule vcf_filter_by_query:
+    """
+    Generates isolated, sub-selected VCF variant sets using custom criteria splits.
+    """
     input:
-        vcf = f"{READS_DIR}/vcf/all_samples.{dna_aligner}.ann.vcf.gz",
-        tbi = f"{READS_DIR}/vcf/all_samples.{dna_aligner}.ann.vcf.gz.tbi"
+        vcf = f"{READS_DIR}/vcf/all_samples.{{aligner}}.ann.vcf.gz",
+        tbi = f"{READS_DIR}/vcf/all_samples.{{aligner}}.ann.vcf.gz.tbi"
     output:
-        vcf = f"{READS_DIR}/vcf/query/{{query_id}}.vcf.gz",
-        tbi = f"{READS_DIR}/vcf/query/{{query_id}}.vcf.gz.tbi"
+        vcf = f"{READS_DIR}/vcf/query/{{query_id}}.{{aligner}}.vcf.gz",
+        tbi = f"{READS_DIR}/vcf/query/{{query_id}}.{{aligner}}.vcf.gz.tbi"
     params:
         region = lambda w: f"-r {str(config.get('REGION', '')).split('=')[-1]}" if config.get('REGION') else "",
         include = lambda w: f"-i '{str(config.get('INCLUDE', '')).split('=')[-1]}'" if config.get('INCLUDE') else ""

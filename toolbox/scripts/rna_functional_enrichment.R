@@ -38,8 +38,9 @@ library(org_db, character.only = TRUE)
 # 2. Load and Prepare Gene Signatures
 sig_df <- read.csv(snakemake@input$sig_genes, row.names = 1, check.names = FALSE)
 gene_list <- unique(rownames(sig_df))
-# CLEANING STEP: Strip the "gene:" prefix !!
-gene_list <- gsub("^gene:", "", gene_list)
+
+# CLEANING STEP: Strips prefixes ("gene:" or "transcript:") and trailing suffixes ("_mRNA", "-scRNA", etc.)
+gene_list <- gsub("^gene:|^transcript:|(_.*|-.*)$", "", gene_list)
 
 if (length(gene_list) == 0) {
     stop("Aborting: Input significant gene list is empty.")

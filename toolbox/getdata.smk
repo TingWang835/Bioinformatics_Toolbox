@@ -5,6 +5,9 @@ localrules: getdata_sra, getdata_local, download_ncbi_ref, samtools_faidx, downl
 # =============================================================================
 
 checkpoint getdata_sra:
+    """
+    Fetches runinfo details via SRA project numbers.
+    """
     conda: "../env/getdata.yaml"
     output: csv = f"{READS_DIR}/sra_runinfo.csv"
     shell:
@@ -15,8 +18,12 @@ checkpoint getdata_sra:
             esearch -db sra -query {config[PRJNUMBER]} | efetch -format runinfo > {output.csv}
         fi
         """
-        
+
+
 checkpoint getdata_local:
+    """
+    Generate runinfo details from local filenames.
+    """
     output: csv = f"{READS_DIR}/local_runinfo.csv"
     shell:
         """
@@ -31,23 +38,6 @@ checkpoint getdata_local:
         done
         """
 
-# =============================================================================
-# Helper Functions
-# =============================================================================
-def get_ref_source(wildcards):
-    """Selects the correct FASTA, GTF, and GFF file paths based on the configured provider."""
-    if ref_src == "ensembl":
-        return {
-            "ref": f"{REFS_DIR}/{species_cap}.{assembly}.dna.toplevel.fa",
-            "gtf": f"{REFS_DIR}/{species_cap}.{assembly}.{release}.gtf",
-            "gff": f"{REFS_DIR}/{species_cap}.{assembly}.{release}.gff3"
-        }
-    else:
-        return {
-            "ref": f"{REFS_DIR}/{acc}.fa",
-            "gtf": f"{REFS_DIR}/{acc}.gtf",
-            "gff": f"{REFS_DIR}/{acc}.gff"
-        }
 
 # =============================================================================
 # Rules
@@ -55,34 +45,55 @@ def get_ref_source(wildcards):
 rule download_ncbi_ref:
     output:
         fasta = f"{REFS_DIR}/{acc}.fa", 
-        gff   = f"{REFS_DIR}/{acc}.gff" 
-    params:
-        search_cmd = (
-            f"esearch -db assembly -query {acc}| elink -target nuccore"
-            if acc.startswith(("GCF_", "GCA_")) else
-            f"esearch -db nuccore -query {acc}"
-        )
+        gff   = f"{REFS_DIR}/{acc}.gff3" 
     conda: "../env/getdata.yaml" 
-    log: f"{LOG_DIR}/getdata/download_ncbi_ref_{acc}.log" 
+    log: f"{LOG_DIR}/getdata/download_ncbi_ref.log" 
     shell:
         """
-        search_result=$({params.search_cmd})
-        echo "$search_result" | efetch -format fasta > {output.fasta} 2> {log}
-        echo "$search_result" | efetch -format gff3 > {output.gff} 2>> {log}
+        # DO NOT REMOVE mkdir
+        mkdir -p {REFS_DIR} 
+        exec 2> {log}
+
+        TMP_ZIP="{REFS_DIR}/{acc}_dataset.zip"
+
+        # Download zip (include fa and gff) via NCBI datasets API CLI
+        datasets download genome accession {acc} \
+            --include genome,gff3 \
+            --filename $TMP_ZIP
+
+        # Unzip package
+        unzip -q -o $TMP_ZIP -d {REFS_DIR}/tmp_out
+
+        # Move fa and gff to path
+        mv {REFS_DIR}/tmp_out/ncbi_dataset/data/{acc}/*_genomic.fna {output.fasta}
+        mv {REFS_DIR}/tmp_out/ncbi_dataset/data/{acc}/genomic.gff {output.gff}
+
+        # Purge temporary packages
+        rm -rf $TMP_ZIP {REFS_DIR}/tmp_out
         """
 
 rule download_ensembl_refs:
     output:
-        fa   = f"{REFS_DIR}/{species_cap}.{assembly}.dna.toplevel.fa",
-        gff3 = f"{REFS_DIR}/{species_cap}.{assembly}.{release}.gff3"
-    log: f"{LOG_DIR}/getdata/download_ensembl_refs.log"
+        fasta = f"{REFS_DIR}/{species_cap}.{assembly}.{release}.fa",
+        gff   = f"{REFS_DIR}/{species_cap}.{assembly}.{release}.gff3"
+    log:
+        f"{LOG_DIR}/getdata/download_ensembl_ref.log"
+    conda: "../env/getdata.yaml"
+    params:
+        url_base = f"ftp://ftp.ensembl.org/pub/release-{release}"
     shell:
         """
-        wget -O {output.fa}.gz ftp://ftp.ensembl.org/pub/release-{release}/fasta/{species}/dna/{species_cap}.{assembly}.dna.toplevel.fa.gz > {log} 2>&1
-        wget -O {output.gff3}.gz ftp://ftp.ensembl.org/pub/release-{release}/gff3/{species}/{species_cap}.{assembly}.{release}.gff3.gz >> {log} 2>&1
-        gunzip -f {output.fa}.gz
-        gunzip -f {output.gff3}.gz
+        exec 2> {log}
+
+        # 1. Stream, decompress, and rename the Genomic FASTA file
+        wget -qO- {params.url_base}/fasta/{species_low}/dna/{species_cap}.{assembly}.dna.toplevel.fa.gz | \
+            gunzip -c > {output.fasta}
+
+        # 2. Stream, decompress, and rename the GFF3 Annotation file
+        wget -qO- {params.url_base}/gff3/{species_low}/{species_cap}.{assembly}.{release}.gff3.gz | \
+            gunzip -c > {output.gff}
         """
+
 
 rule download_fastq:
     output:
@@ -111,34 +122,32 @@ rule download_fastq:
         """
 
 rule gff_to_gtf:
+    """
+    Locally converts GFF3  to GTF format via gffread.
+    """
     input:
-        gff3 = (
-            f"{REFS_DIR}/{species_cap}.{assembly}.{release}.gff3"
-            if ref_src == "ensembl" else f"{REFS_DIR}/{acc}.gff"
-        )
+        gff = f"{REFS_DIR}/{{ref_file}}.gff3" # Uses standardized REFS_DIR variable
     output:
-        gtf = (
-            f"{REFS_DIR}/{species_cap}.{assembly}.{release}.gtf"
-            if ref_src == "ensembl" else f"{REFS_DIR}/{acc}.gtf"
-        )
-    log: f"{LOG_DIR}/getdata/gff_to_gtf.log"
+        gtf = f"{REFS_DIR}/{{ref_file}}.gtf"
+    log: f"{LOG_DIR}/getdata/gff_to_gtf_{{ref_file}}.log" # Named uniquely per target
     conda: "../env/getdata.yaml"
     shell:
         """
-        gffread {input.gff3} -T -o {output.gtf} > {log} 2>&1
+        gffread {input.gff} -T -o {output.gtf} > {log} 2>&1
         """
 
+
 rule samtools_faidx:
+    """
+    Generates .fai index tracks on reference fasta structures.
+    """
     input:
-        unpack(get_ref_source)
+        fasta = f"{REFS_DIR}/{{ref_file}}.fa"
     output:
-        fai = (
-            f"{REFS_DIR}/{species_cap}.{assembly}.dna.toplevel.fa.fai"
-            if ref_src == "ensembl" else f"{REFS_DIR}/{acc}.fa.fai"
-        )
-    log: f"{LOG_DIR}/getdata/samtools_faidx.log"
-    conda: "../env/dna_aligner.yaml"
+        fai = f"{REFS_DIR}/{{ref_file}}.fa.fai"
+    log: f"{LOG_DIR}/getdata/samtools_faidx_{{ref_file}}.log" 
+    conda: "../env/dna_aligner.yaml" 
     shell:
         """
-        samtools faidx {input.ref} > {log} 2>&1
+        samtools faidx {input.fasta} > {log} 2>&1
         """

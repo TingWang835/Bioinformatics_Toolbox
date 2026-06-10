@@ -4,7 +4,10 @@ channels:
   - bioconda
   - defaults
 dependencies:
-  - entrez-direct
+  - ncbi-datasets-cli >=16.0 
+  - unzip
   - sra-tools
+  - wget
+  - gzip
   - pandas
   - gffread # used in rule gff_to_gtf

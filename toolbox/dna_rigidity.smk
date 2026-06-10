@@ -11,7 +11,7 @@ localrules: detect_dna_rigidity, generate_igv_track
 
 rule detect_dna_rigidity:
     input:
-        unpack(get_ref_source)
+        unpack(get_refs)
     output:
         tsv = f"{READS_DIR}/dna_rigidity/{acc}_rigidity_profile.tsv"
     conda:
@@ -21,7 +21,7 @@ rule detect_dna_rigidity:
     params:
         script = "toolbox/scripts/dna_rigidity.py"
     shell:
-        "python {params.script} {input.ref} {output.tsv}"
+        "python {params.script} {input.fasta} {output.tsv} > {log} 2>&1"
 
 
 rule generate_igv_track:

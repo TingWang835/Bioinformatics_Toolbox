@@ -11,7 +11,7 @@ lfc_cutoff <- snakemake@params$lfc
 fdr_cutoff <- snakemake@params$fdr
 bg_color   <- snakemake@params$bg_color
 
-bg_element <- if (bg_color %in= c("transparent", "na", "")) {
+bg_element <- if (bg_color %in% c("transparent", "na", "")) {
     element_blank()
 } else {
     element_rect(fill = bg_color, color = NA)

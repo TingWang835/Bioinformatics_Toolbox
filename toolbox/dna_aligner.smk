@@ -31,7 +31,7 @@ def get_align_input(wildcards):
 
 rule bwa_index:
     input: 
-        unpack(get_ref_source)
+        unpack(get_refs)
     output: 
         multiext(f"{REFS_DIR}/bwa/index", ".amb", ".ann", ".bwt", ".pac", ".sa")
     log: 
@@ -41,11 +41,11 @@ rule bwa_index:
     params: 
         prefix = f"{REFS_DIR}/bwa/index"
     shell: 
-        "bwa index {input.ref} -p {params.prefix} > {log} 2>&1"
+        "bwa index {input.fasta} -p {params.prefix} > {log} 2>&1"
 
 rule bowtie2_index:
     input: 
-        unpack(get_ref_source)
+        unpack(get_refs)
     output: 
         multiext(f"{REFS_DIR}/bowtie2/index", ".1.bt2", ".2.bt2", ".3.bt2", ".4.bt2", ".rev.1.bt2", ".rev.2.bt2")
     log: 
@@ -55,11 +55,11 @@ rule bowtie2_index:
     params: 
         prefix = f"{REFS_DIR}/bowtie2/index"
     shell: 
-        "bowtie2 build {input.ref} {params.prefix} > {log} 2>&1"
+        "bowtie2 build {input.fasta} {params.prefix} > {log} 2>&1"
 
 rule minimap2_index:
     input: 
-        unpack(get_ref_source)
+        unpack(get_refs)
     output: 
         f"{REFS_DIR}/minimap2.mmi"
     log: 
@@ -67,7 +67,7 @@ rule minimap2_index:
     conda: 
         "../env/dna_aligner.yaml"
     shell: 
-        "minimap2 -d {output} {input.ref} > {log} 2>&1"
+        "minimap2 -d {output} {input.fasta} > {log} 2>&1"
 
 # =============================================================================
 # Aligner Rules
