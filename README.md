@@ -127,21 +127,15 @@ You can run:`./ run.sh your_PRJNAME note ` at any time to check available functi
 
 <a id="2.2-Download-Reference"></a>
 ## 2.2 Download Reference
-   NCBI and Ensembl reference source can be selected.
-   
-   ### NCBI
-   Enter config variables \
-         `REFNAME`: "your_REFNAME" \
-         `REF_SOURCE`: "NCBI" \
-         `ACC`: e.g. "AF086833" (example) 
-
-   ### Ensembl
-   Enter config variables \
-         `REFNAME`: "your_REFNAME" \
-         `REF_SOURCE`: "ENSEMBL" \
-         `SPECIES_LATIN`: "saccharomyces_cerevisiae" (example) \
-         `ASSEMBLY`: "R64-1-1" (example) \
-         `RELEASE`: 112 (example)
+  Enter the following config variables:
+```yaml
+   REF: 
+      SOURCE: "ncbi" # choose between "ncbi" and "ensembl"
+      SPECIES: "zaire_ebolavirus" # latin name for species
+      ASSEMBLY: "GCF_000848505.1" # e.g. ncbi: GRCh38, ensembl: R64-2-1
+      RELEASE: "2" # e.g. ncbi: p14 (patch #), ensemble: 83
+      ACC: "GCF_000848505.1" # leave empty for ensembl
+```
    
    In your snakemake env terminal enter:
    ```bash
@@ -150,7 +144,7 @@ You can run:`./ run.sh your_PRJNAME note ` at any time to check available functi
   
    fasta, gff3 files will be downloaded, gtf file will be generated from gff3. \
    File Locations: \
-   `refs/your_REFNAME/ncbi or ensembl/`
+   `refs/SOURCE/SPECIES/ASSEMBLY/RELEASE`
 
 
 
@@ -185,7 +179,7 @@ You can run:`./ run.sh your_PRJNAME note ` at any time to check available functi
   ```
   File Locations: \
    Aligner index:
-   `refs/your_REFNAME/ncbi or ensembl/aligner_name`\
+   `refs/SOURCE/SPECIES/ASSEMBLY/RELEASE/aligner_name/`\
    Bam files:
    `reads/your_PRJNAME/bam/` \
    Filtered bam files:
@@ -209,7 +203,7 @@ You can run:`./ run.sh your_PRJNAME note ` at any time to check available functi
    Raw vcf samples: `reads/your_PRJNAME/vcf/raw/` \
    Consensus.fa files: `reads/your_PRJNAME/vcf/consensus/` \
    Merged and normalized vcf: `reads/your_PRJNAME/vcf/` \
-   SnpEff database: `database/snpeff/your_REFNAME/` \
+   SnpEff database: `database/snpeff/SPECIES.ASSEMBLY.RELEASE/` \
    Annotated vcf: `reads/your_PRJNAME/vcf/`
 
    ### Querying Annotated VCF with bcfquery.sh
@@ -268,7 +262,7 @@ You can run:`./ run.sh your_PRJNAME note ` at any time to check available functi
   ```
    File Locations: \
    Aligner index:
-   `refs/your_REFNAME/ncbi or ensembl/aligner_name`\
+   `refs/SOURCE/SPECIES/ASSEMBLY/RELEASE/aligner_name/`\ 
    Bam files:
    `reads/your_PRJNAME/bam/` \
    Bigwig files:
@@ -356,7 +350,7 @@ You can run:`./ run.sh your_PRJNAME note ` at any time to check available functi
 Working Directory 
 ├── databases
 │   └── snpEff                        (snpeff database for vcf annotation)
-│       └── {REFNAME}                 (databases built in analysis)
+│       └── {SPECIES}.{ASSEMBLY}.{RELEASE}   (databases built in analysis)
 │           ├── sequence.bin
 │           ├── snpEff.config
 │           └── snpEffectPredictor.bin
@@ -394,9 +388,14 @@ Working Directory
 │       └── sample_2.fastq
 │
 ├── refs
-│   └── {REFNAME}
-│       ├── ensembl                   (ncbi reference files, fa, gff3)
-│       └── ncbi                      (ncbi reference files, fa, gff3)
+│     ├── ensembl                     
+│     │    └── species
+│     │        └── assembly
+│     │              └── release      (ensembl reference files, fa, gff3)
+│     └── ncbi 
+│          └── species
+│              └── assembly
+│                    └── release      (ncbi reference files, fa, gff3)
 │
 ├── toolbox                           (Modularized tools)
 │   └── scripts                       (python and R scripts)
