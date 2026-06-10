@@ -4,5 +4,5 @@ reads/*
 refs/
 note.txt
 databases/
-sandbox_envs/
+dev_envs/
 toolbox/geo_extraction.smk
