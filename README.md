@@ -301,7 +301,7 @@ You can run:`./ run.sh your_PRJNAME note ` at any time to check available functi
    Expression analysis by DESeq2 or edgeR > Compare Stat of the two analysers
 
    Can choose DESeq2 or edgeR by config: \
-         `RXP_ANALYSER`: "deseq2" \
+         `EXP_ANALYSER`: "deseq2" \
    DESeq2 config variable 
    ```yaml
          `DESEQ2_NORM`: "TRUE"   # use DESeq2 normalize method
