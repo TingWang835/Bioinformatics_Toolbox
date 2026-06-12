@@ -300,9 +300,11 @@ You can run:`./ run.sh your_PRJNAME note ` at any time to check available functi
 ## 2.8 RNA expression and tools compare
    Expression analysis by DESeq2 or edgeR > Compare Stat of the two analysers
 
-   Can choose DESeq2 or edgeR by config: \
+   Can choose DESeq2 or edgeR by config: 
+   ```yaml
          `EXP_ANALYSER`: "deseq2" \
-   DESeq2 config variable 
+   ```
+ DESeq2 config variable 
    ```yaml
          `DESEQ2_NORM`: "TRUE"   # use DESeq2 normalize method
    ```
