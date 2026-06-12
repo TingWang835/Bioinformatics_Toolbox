@@ -15,4 +15,4 @@
 ## Execution Logic
 1. **Toolbox Isolation**: Rules in `toolbox/` should use relative paths based on the root `Snakefile`.
 2. **Data Specificity**: Always verify the `config.yaml` path inside the `Snakefile` before running a new project.
-3. **Outputs**: All results must be directed to the specific project subdirectory within `data/` to avoid cross-contamination.
+3. **Outputs**: All results must be directed to the specific project subdirectory within `reads/` to avoid cross-contamination.

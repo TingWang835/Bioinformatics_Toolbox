@@ -1,15 +1,15 @@
 # Bioinformatics_Toolbox
 This is a bioinformatics toolbox running on Snakemake platform via conda environment (tested on linux). \
-Main purposse: 
+Main purpose: 
 1. Partially/fully automate bioinfo analysis using existing packages with less commands
 2. Build an expandable scaffolding that can adapt to various job reqirement.
 
 Featuring:
-1. Centeralized control via snakefile.
+1. Centeralized control via Snakefile.
 2. Modularized bioinfo "tools", lower maintenance burdens.
 3. Portable environments via snakemake env control.
-4. Tolerates single and pair end sequences.
-4. Neatly organized output folders having everything readily assessible under reads/project_name folder.
+4. Tolerates single- and pair-end sequences.
+4. Neatly organized output folders having everything readily accessible under reads/project_name folder.
 5. Project specific config variables, allows switching between projects with a single name change.
 6. Stand alone Reference folder, allows ref sharing across projects, saving spaces.
 7. Organized logs and project_map, AI agent ready!
@@ -45,7 +45,7 @@ Clean up excessive files \
 # 1. Setups 
 <a id="1.1-Miniconda-3"></a>
 ## 1.1 Miniconda 3
-   1. Downlaod latest miniconda 3
+   1. Download latest miniconda 3
    ```bash
       wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh
    ```
@@ -60,12 +60,12 @@ Clean up excessive files \
 <a id="1.2-Snakemake"></a>
 ## 1.2 Snakemake
    1. Download and unpack github package under your working directory.
-   2. Makesure environment.yml is in the working dir.
+   2. Make sure environment.yml is in the working dir.
    3. Move terminal to working dir and run:
    ```bash
       conda env create -f snakemake_install.yml -n new_env_name
    ```
-   4. Run following command in directory terminal (first time only), to permit excution of run.sh and bcfquery.sh.
+   4. Run following command in directory terminal (first time only), to permit execution of run.sh and bcfquery.sh.
    ```bash
       chmod +x run.sh
       chmod +x bcfquery.sh
@@ -229,7 +229,7 @@ You can run:`./ run.sh your_PRJNAME note ` at any time to check available functi
     # or
     ./bcfquery your_project_name VTYPE="indels"
    ```
-   Query condition can be choosen from REGION, INCLUDE and VTYPE (for now)
+   Query condition(s) can be choosen from REGION, INCLUDE and VTYPE (for now)
 
 <a id="2.6-DNA-rigidity-score"></a>
 ## 2.6 DNA rigidity score
@@ -328,7 +328,7 @@ You can run:`./ run.sh your_PRJNAME note ` at any time to check available functi
 
 <a id="2.9-Expression-report-analysis-Heatmap-and-function-enrichment"></a>
 ## 2.9 Expression report analysis, Heatmap and function enrichment
-   PCA > MA plot > Vocalno plot > P-value histgram> Significant different expression csv > Heatmap > Enrichment dotplot and csv
+   PCA > MA plot > Volcano plot > P-value histogram > Significant differentially expressed gene CSV > Heatmap > Enrichment dotplot and csv
 
    Universal config variables: 
    ```yaml
@@ -359,7 +359,7 @@ You can run:`./ run.sh your_PRJNAME note ` at any time to check available functi
 <a id="2.final-Clean-up"></a>
 ## 2.final Clean up
 
-   For Snakemake to accept both single and paired end sequences without throwing a "tamturm", dummy r2 files are created in multiple steps.
+   For Snakemake to accept both single and paired end sequences without throwing a "tamtrum", dummy r2 files are created in multiple steps.
 
    To clean up the dummy files, use command in terminal:
    ```bash
