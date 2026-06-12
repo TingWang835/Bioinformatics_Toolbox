@@ -302,7 +302,7 @@ You can run:`./ run.sh your_PRJNAME note ` at any time to check available functi
 
    Can choose DESeq2 or edgeR by config: 
    ```yaml
-         `EXP_ANALYSER`: "deseq2" \
+         `EXP_ANALYSER`: "deseq2" 
    ```
  DESeq2 config variable 
    ```yaml
