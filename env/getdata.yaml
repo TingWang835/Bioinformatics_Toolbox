@@ -5,6 +5,7 @@ channels:
   - defaults
 dependencies:
   - ncbi-datasets-cli >=16.0 
+  - entrez-direct >=19.2
   - unzip
   - sra-tools
   - wget
