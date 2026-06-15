@@ -48,7 +48,7 @@ rule bowtie2_index:
     params: 
         prefix = f"{REFS_DIR}/bowtie2/index"
     shell: 
-        "bowtie2 build {input.fasta} {params.prefix} > {log} 2>&1"
+        "bowtie2-build {input.fasta} {params.prefix} > {log} 2>&1"
 
 rule minimap2_index:
     input: 
