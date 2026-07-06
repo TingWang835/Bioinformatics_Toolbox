@@ -6,3 +6,4 @@ note.txt
 databases/
 dev_envs/
 toolbox/geo_extraction.smk
+toolbox/scripts/__pycache__
