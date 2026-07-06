@@ -242,9 +242,36 @@ def get_chip_align(wildcards):
     """Align, generate bam and filtered bam from chipseq dataset."""
     samples = get_runinfo(wildcards)
     aligner = dna_aligner
-    return expand("{rddir}/bam/filtered/{s}.{aln}.chip.filtered.bam",
+    return expand("{rddir}/bam/{s}.{aln}.chip.ready.bam",
                   rddir=READS_DIR, s=samples, aln=aligner)
-                  
+def get_chip_bigwig(wildcards):
+    """Generates BigWig coverage targets for all samples processed with a spliced aligner."""
+    samples = get_runinfo(wildcards)
+    aligner = dna_aligner
+    return expand("{rddir}/bam/bigwig/{s}.{aln}.bw",
+                rddir=READS_DIR, s=samples, aln=aligner)
+
+def get_chip_peakcall_batch(wildcards):
+    """
+    Dynamically tracks the entire list of treatment sample peak files
+    by resolving the active datasource file path directly.
+    """
+    peak_caller = config.get("PEAKCALL", {}).get("CALLER", "macs3").lower()
+    treat_cond = config.get("TREAT_COND", "treatment_a")
+    dsource = config.get("DATASOURCE", "SRA").lower()
+    runinfo_df = pd.read_csv(f"{READS_DIR}/{dsource}_runinfo.csv")
+    treatment_samples = runinfo_df[runinfo_df["condition"] == treat_cond]["Run"].tolist() 
+
+    if peak_caller == "macs3":
+        return expand("{rddir}/peaks/macs3/motif_analysis/{s}/meme-chip.html", 
+                      rddir=READS_DIR, s=treatment_samples)
+    elif peak_caller == "gem":
+        return expand("{rddir}/peaks/gem/{s}/{s}_GEM_events.bed", 
+                      rddir=READS_DIR, s=treatment_samples)
+    else:
+        raise ValueError(f"Unsupported CALLER target: {peak_caller}")
+
+
 # =============================================================================
 # Include Modular Rule Files
 # =============================================================================
@@ -257,6 +284,7 @@ include: "toolbox/dna_rigidity.smk"
 include: "toolbox/rna_aligner.smk"
 include: "toolbox/rna_diff_exp.smk"
 include: "toolbox/chip_aligner.smk"
+include: "toolbox/chip_peakcall.smk"
 
 # =============================================================================
 # Terminal Rules
@@ -380,4 +408,16 @@ rule rna_all:
 
 rule chip_align:
     """Align fastq files with index by chosen aligner in config.yaml"""
-    input: get_chip_align
+    input: 
+        alignments = get_chip_align,
+        bigwig = get_chip_bigwig
+
+rule chip_peakcall:
+    """
+    Acts as the entry point tracking rule for each sample.
+    """
+    input:
+        get_chip_peakcall_batch
+
+
+        

@@ -103,11 +103,10 @@ rule download_fastq:
     log: f"{LOG_DIR}/getdata/download_fastq/{{sample}}.log"
     params:
         dsource = config.get("DATASOURCE", "SRA").upper(),
-        n = config.get("N", 10000)
     shell:
         """
         if [ "{params.dsource}" == "SRA" ]; then
-            fastq-dump -X {params.n} --split-files --outdir {READS_DIR} {wildcards.sample}
+            fastq-dump --split-files --outdir {READS_DIR} {wildcards.sample}
             if [ ! -f "{output.r2}" ]; then touch {output.r2}; fi
         elif [ "{params.dsource}" == "LOCAL" ]; then
             if [ ! -f "{output.r1}" ]; then 
@@ -136,7 +135,6 @@ rule gff_to_gtf:
         gffread {input.gff} -T -o {output.gtf} > {log} 2>&1
         """
 
-
 rule samtools_faidx:
     """
     Generates .fai index tracks on reference fasta structures.
@@ -151,3 +149,34 @@ rule samtools_faidx:
         """
         samtools faidx {input.fasta} > {log} 2>&1
         """
+
+
+# import sys
+# sys.path.append("toolbox/scripts")
+# from uscs_chromosomes import CHROM_DICTS
+
+# rule uscs_translator: 
+# """this is a translator for generating a fasta file with USCS chrom naming system from ncbi or ensemble ref"""
+#     input:
+#         unpack(get_refs)
+#     output:
+#         uscs_fasta = f"{REFS_DIR}/uscs_chroms.fa"
+#     params:
+#         # Evaluates cleanly using your isolated helper script
+#         mapping = get_ucsc_mapping(species_low)
+#     log:
+#         f"{LOG_DIR}/refs/uscs_translator.log"
+#     run:
+#         with open(input.fasta, "r") as infile, open(output.uscs_fasta, "w") as outfile:
+#             for line in infile:
+#                 if line.startswith(">"):
+#                     # Extract the current header name (e.g., ">I" or ">I description")
+#                     original_header = line.strip().split()[0].replace(">", "")
+                    
+#                     # Look up translation; fall back to original header if missing
+#                     new_header = params.mapping.get(original_header, original_header)
+                    
+#                     # Reconstruct the header line
+#                     outfile.write(f">{new_header}\n")
+#                 else:
+#                     outfile.write(line)
