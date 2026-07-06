@@ -1,0 +1,12 @@
+name: chip_peakcall
+channels:
+  - conda-forge
+  - bioconda
+dependencies:
+  - python=3.11
+  - openjdk
+  - macs3>=3.0.1
+  - wget
+  - bedtools
+  - sdust
+  - meme

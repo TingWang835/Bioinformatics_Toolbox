@@ -7,3 +7,5 @@ dependencies:
   - bowtie2
   - minimap2
   - samtools
+  - picard
+  - deeptools
