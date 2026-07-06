@@ -31,8 +31,6 @@ REF:
 # SRA: if runinfo.csv exist: download SRRs from runinfo.csv, else query for runinfo.csv from SRA metadata
 DATASOURCE: "SRA"
 
-# Get how many number of reads from original fastq
-N: "100000"
 
 
 # =============================================================================
