@@ -19,4 +19,5 @@ snakemake \
     --use-conda \
     --cores 4 \
     --printshellcmds \
+    $EXTRA_FLAGS \
     "$TARGET"
