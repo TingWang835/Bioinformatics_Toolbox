@@ -334,6 +334,10 @@ rule note:
         print("                                generate csv for list of significantly different expressed genes")
         print("  snakemake rna_enrich        - Generate heatmap and perform functional enrichment study")
         print("  snakemake rna_all           - Gets samples and refs, run QC, rna align, exp, report and enrich")
+        print("  snakemake chip_align        - Run Chip alignment and covert to bigwig")
+        print("  snakemake chip_peakcall     - Run Peak caller for Chip-Seq, run motif analysis")
+        print("  snakemake chip_annotation   - Run Chip annotation and enrichment")
+        print("  snakemake chip_all          - Run Gets samples and refs, run QC, chip align, peakcall, annotation and enrichment")
         print("Clean up")
         print("  snakemake cleanup           - Clean up dummy R2 files from single end sequencing")
         print("="*50 + "\n")
@@ -426,7 +430,6 @@ rule rna_all:
 # =============================================================================
 # Chip-Seq Alignment and Peak Analysis
 # =============================================================================
-
 rule chip_align:
     """Align fastq files with index by chosen aligner in config.yaml"""
     input: 
