@@ -32,6 +32,10 @@ RNAseq related functions \
 [2.7 RNA Aligner](#2.7-RNA-aligner) \
 [2.8 RNA expression and tools compare](#2.8-RNA-expression) \
 [2.9 Expression report analysis Heatmap and function enrichment](#2.9-expression-report-analysis-heatmap-and-function-enrichment) \
+Chip_Seq related functions \
+[2.10 Chip Aligner](#2.10-Chip-aligner) \
+[2.11 Chip Peak Caller](#2.11-Chip-Peak-Caller) \
+[2.12 Chip Annotation and Enrichment Analysis](#2.12-Chip-Annotation-and-Enrichment-Analysis) \
 Clean up excessive files \
 [2.final Clean up](#2.final-Clean-up)
 3. Folder Structure \
@@ -128,6 +132,8 @@ You can run:`./ run.sh your_PRJNAME note ` at any time to check available functi
    ./run.sh your_PRJNAME runinfo
    ```
    8. local_runinfo.csv is generated using fastq file names
+   
+
 
 <a id="2.2-Download-Reference"></a>
 ## 2.2 Download Reference
@@ -258,6 +264,19 @@ You can run:`./ run.sh your_PRJNAME note ` at any time to check available functi
 
 <a id="2.7-RNA-aligner"></a>
 ## 2.7 RNA Aligner
+### Runinfo Metadata 
+   Add treatment condition metadata to runinfo,csv: \
+      Manually add `condition` column \
+      \
+   For Example: (leave no space between added data and commas)
+   ```csv
+      Run,condition
+      SRR001,control
+      SRR002,control
+      SRR003,treatment_a
+      SRR004,treatment_a
+   ```
+### Running RNA align
    Route 1: Bam by sequence alinger (Star, Hisat2) > convert bam to bigwig > FeatureCount > merge \
    Route 2: Pseudo counts by pseudo aligner (Salmon, Kallisto) > merge 
 
@@ -357,7 +376,132 @@ You can run:`./ run.sh your_PRJNAME note ` at any time to check available functi
     `reads/your_PRJNAME/expression/` 
 
 
+<a id="2.10-Chip-aligner"></a>
+ ## 2.10 Chip Aligner
+   ### Runinfo Metadata
+   1. Add treatment condition metadata to runinfo,csv: \
+      Manually add `condition` column 
+   2. Add grouping metadata:\
+      Manually add `group` column in runinfo.csv
 
+   For Example: (leave no spcae between added data and commas)
+   ```csv
+      Run,condition,group
+      SRR001,control,1
+      SRR002,control,2
+      SRR003,treatment,1
+      SRR004,treatment,2
+   ```
+   For several treatment sequencing sharing the same control:
+   ```csv
+      Run,condition,group
+      SRR001,control,1
+      SRR002,treatment,1
+      SRR003,treatment,1
+   ```
+   ### Running Chip Align
+   Chip align shared similarity with DNA align,It supports alignment of Chip percipitated DNA sequences to ref using bwa or bowtie2, then filtered the bam files by mapping quality with SAMtools \
+   Can choose from 3 DNA aligner(`bwa`, `bowtie2`, ) by config: \
+         `ALIGNER`: "bwa" \
+   SAMtools view requires config variables 
+   ```yaml  
+         `MAPQ`: "30"
+   ```
+   Bigwig files will be generated using fltered Bam diles for better visualization.
+
+   In your snakemake env terminal enter:
+   ```bash
+   ./run.sh your_PRJNAME chip_align
+  ```
+  File Locations: \
+   Aligner index:
+   `refs/SOURCE/SPECIES/ASSEMBLY/RELEASE/aligner_name/`\
+   Bam files:
+   `reads/your_PRJNAME/bam/` \
+   Filtered bam files:
+   `reads/your_PRJNAME/bam/filtered/`\
+   Bigwig files:
+   `reads/your_PRJNAME/bam/bigwig/`
+
+<a id="2.11-Chip-Peak-Caller"></a>
+   ## 2.11 Chip Peak Caller
+   Chip Peak Caller runs the treatmet + control sample pairs by calling packages `Macs3` or `GEM`.\
+   Motif analysis is carried by `MEME-Chip` for Macs3 data (filtered by `sdust mask` and `blacklist`); or by GEM's internal motif analysis.
+
+   chip caller utilizes a 2 tier config variable structure (please see config template for details)
+   ```yaml  
+      PEAKCALL:
+         CALLER: "gem"     
+         FORMAT: "BAM"     
+         EXTSIZE: 20        
+         G_SIZE: 12100000    
+         FDR: 0.01         
+         MODEL: "nomodel"      
+         SMOOTHING: 30        
+         GEM_VERSION: "v2.5"  
+         K_MIN: 6
+         K_MAX: 13
+         READ_DIST: "ChIP-exo.txt"
+   # if Macs3 was selected
+      CCUT: 200
+   ```
+
+   In your snakemake env terminal enter:
+   ```bash
+   ./run.sh your_PRJNAME chip_peakcall
+  ```
+  File Locations: 
+   #### GEM
+   GEM jar, Read_distribution, chrom.sizes: 
+   `refs/SOURCE/SPECIES/ASSEMBLY/RELEASE/gem_(version)/`\
+   GEM_events.txt, bed, Motif html:
+   `reads/your_PRJNAME/peaks/gem/sample_name_SRR/` 
+   #### Macs3
+   Mask and black list:
+   `reads/your_PRJNAME/peaks/filter_mask_blacklist/` \
+   NarrowPeak, bed:
+   `reads/your_PRJNAME/peaks/macs3/`\
+   Motif results: `reads/your_PRJNAME/peaks/macs3/motif_analysis`\
+
+<a id="2.12-Chip-Annotation-and-Enrichment-Analysis"></a>
+   ## 2.11 Chip Annotation and Enrichment Analysis
+   1. Analysis density matrix, profile plot and heatmap for peaks located near TSS using `ChipSeeker` and `deeptools`.
+   2. Output enrichment analysis by `GO` and `KEGG` with dotplots.
+
+   Annotation and Enrichment will use the following config variables.
+   ```yaml  
+   # setting TSS region for ChipSeeker (bp)
+   TSS_REGION_START: -3000
+   TSS_REGION_END: 100
+
+   # determine boundary for profile plot (bp)
+   INTENSITY_UP: 3000
+   INTENSITY_down: 1000
+
+   # GO and KEGG enrichment variables
+   KEGG_ORG: "sce"     # Short code for KEGG (e.g., "hsa", "mmu", "sce")
+   ENRICH_PVAL: 0.05   # p value cutoff for enrichments
+   ENRICH_QVAL: 0.2   # FDR cutoff for enrichments
+
+   # plot variables
+   BG_COLOR: "white" # set back ground color for dotplot
+   DOTPLOT_HEIGHT: 10
+   ```
+
+
+   In your snakemake env terminal enter:
+   ```bash
+   ./run.sh your_PRJNAME chip_annotation
+  ```
+  File Locations: 
+   Annotation matrix and csv: 
+   `reads/your_PRJNAME/annotation` \
+   Heatmap and Profilep plot:
+   `reads/your_PRJNAME/annotation/plots` \
+   Enrichment results and dotplots:
+   `reads/your_PRJNAME/annotation/enrichment`
+
+   
 <a id="2.final-Clean-up"></a>
 ## 2.final Clean up
 

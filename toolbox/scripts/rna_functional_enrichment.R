@@ -21,16 +21,12 @@ bg_element <- if (bg_color %in% c("transparent", "na", "")) {
 message("Starting functional enrichment analysis for species reference string: ", species_name)
 
 # Use strict procedural routing to prevent eager execution of stop()
-if (species_name %in% c("saccharomycescerevisiae", "scerevisiae", "yeast")) {
-    org_db <- "org.Sc.sgd.db"
-} else if (species_name %in% c("homosapiens", "hsapiens", "human")) {
-    org_db <- "org.Hs.eg.db"
-} else {
-    stop(paste("Aborting: Species package mapping not configured for:", species_name))
-}
+orgdb_name <- snakemake@params[["orgdb"]]
+library(orgdb_name, character.only = TRUE)
+orgdb_obj <- get(orgdb_name)
 
 # Dynamic library activation
-if (!requireNamespace(org_db, quietly = TRUE)) {
+if (!requireNamespace(orgdb_obj, quietly = TRUE)) {
     stop(paste("Aborting: Required annotation package library is missing:", org_db))
 }
 library(org_db, character.only = TRUE)

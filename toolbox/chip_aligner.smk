@@ -76,7 +76,7 @@ rule chip_mark_dup:
         f"{LOG_DIR}/aligner/remove_dup/{{sample}}.{{aligner}}.log"
     conda:
         "../env/dna_aligner.yaml"
-    threads: 2
+    threads: 4
     shell:
         """
         # Inject required Read Group tag using tabs (\t) to keep parameters safely bound

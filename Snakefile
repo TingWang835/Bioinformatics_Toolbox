@@ -271,6 +271,26 @@ def get_chip_peakcall_batch(wildcards):
     else:
         raise ValueError(f"Unsupported CALLER target: {peak_caller}")
 
+def get_chip_annotation_batch(wildcards):
+    """
+    Dynamically tracks the entire list of treatment sample SRR/filename to find the right peak.bed or bigwig files
+    """
+    treat_cond = config.get("TREAT_COND", "treatment_a")
+    dsource = config.get("DATASOURCE", "SRA").lower()
+    runinfo_df = pd.read_csv(f"{READS_DIR}/{dsource}_runinfo.csv")
+    treatment_samples = runinfo_df[runinfo_df["condition"] == treat_cond]["Run"].tolist() 
+
+    assignment = expand("{rddir}/annotation/{s}_annotated_peaks.csv", rddir=READS_DIR, s=treatment_samples)
+    matrix = expand("{rddir}/annotation/{s}_vs_control_tss_matrix.gz", rddir=READS_DIR, s=treatment_samples)
+    profileplot = expand("{rddir}/annotation/plots/{s}_vs_control_tss_profile.png", rddir=READS_DIR, s=treatment_samples)
+    heatmap = expand("{rddir}/annotation/plots/{s}_vs_control_density_heatmap.png", rddir=READS_DIR, s=treatment_samples)
+
+    go_enrich = expand("{rddir}/annotation/enrichment/{s}_go_enrichment.csv", rddir=READS_DIR, s=treatment_samples)
+    kegg_enrich = expand("{rddir}/annotation/enrichment/{s}_kegg_enrichment.csv", rddir=READS_DIR, s=treatment_samples)
+    go_dot = expand("{rddir}/annotation/enrichment/{s}_go_dotplot.png", rddir=READS_DIR, s=treatment_samples)
+    kegg_dot = expand("{rddir}/annotation/enrichment/{s}_kegg_dotplot.png", rddir=READS_DIR, s=treatment_samples)
+    return assignment + matrix + profileplot + heatmap + go_enrich + kegg_enrich + go_dot + kegg_dot
+
 
 # =============================================================================
 # Include Modular Rule Files
@@ -285,6 +305,7 @@ include: "toolbox/rna_aligner.smk"
 include: "toolbox/rna_diff_exp.smk"
 include: "toolbox/chip_aligner.smk"
 include: "toolbox/chip_peakcall.smk"
+include: "toolbox/chip_annotation.smk"
 
 # =============================================================================
 # Terminal Rules
@@ -419,5 +440,13 @@ rule chip_peakcall:
     input:
         get_chip_peakcall_batch
 
+rule chip_annotation:
+    input:
+        get_chip_annotation_batch
 
-        
+rule chip_all:
+    input:
+        get_chip_align,
+        get_chip_bigwig,
+        get_chip_peakcall_batch,
+        get_chip_annotation_batch

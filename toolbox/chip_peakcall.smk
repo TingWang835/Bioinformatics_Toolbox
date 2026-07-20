@@ -25,8 +25,8 @@ GEM_REFS_DIR = f"{REFS_DIR}/gem_{gem_version}"
 # =============================================================================
 # Helper Function
 # =============================================================================
-
-runinfo_df = pd.read_csv(f"{READS_DIR}/sra_runinfo.csv")
+dsource = config.get("DATASOURCE", "SRA").lower()
+runinfo_df = pd.read_csv(f"{READS_DIR}/{dsource}_runinfo.csv")
 
 def get_peakcall_input(wildcards):
     """
@@ -35,7 +35,7 @@ def get_peakcall_input(wildcards):
     """
     current_sample_row = runinfo_df[runinfo_df["Run"] == wildcards.sample]
     if current_sample_row.empty:
-        raise ValueError(f"Sample {wildcards.sample} not found in sra_runinfo.csv")
+        raise ValueError(f"Sample {wildcards.sample} not found in runinfo.csv")
         
     current_group = current_sample_row["group"].values[0]
     ctrl_cond = config.get("CONTROL_COND", "control_a")
