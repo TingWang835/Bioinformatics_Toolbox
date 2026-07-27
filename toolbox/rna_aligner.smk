@@ -36,6 +36,7 @@ rule star_index:
     threads: 4
     shell:
         """
+        mkdir -p {output}
         STAR --runMode genomeGenerate \
              --genomeDir {output} \
              --genomeFastaFiles {input.fasta} \
